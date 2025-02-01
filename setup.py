@@ -30,7 +30,7 @@ REQUIRED_PACKAGES = [
 file_path = os.path.abspath(os.path.dirname(__file__))
 
 setup(
-    name='samll_doges',
+    name='samll_doge',
     license='Apache 2.0',
     version=__version__,
     description="A Family of Dynamic Ultra-Fast Small Language Models Ready for Embodied Artificial General Intelligence!",
@@ -38,7 +38,7 @@ setup(
     long_description_content_type='text/markdown',
     author='Jingze Shi',
     author_email="losercheems@gmail.com",
-    url='https://github.com/SamllDoge/SmallDoges',
+    url='https://github.com/SamllDoge/small-doge',
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
@@ -53,5 +53,5 @@ setup(
     install_requires=REQUIRED_PACKAGES,
     python_requires='>=3.9',
     zip_safe=False,
-    keywords=['smalldoges', 'doge', 'small language models', 'pytorch', 'transformers', 'trl'],
+    keywords=['small-doge', 'doge', 'small language models', 'pytorch', 'transformers', 'trl'],
 )

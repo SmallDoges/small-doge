@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 Jingze Shi and the HuggingFace Inc. team. All rights reserved.
+# Copyright 2025 SmallDoge team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@ from typing import TYPE_CHECKING
 from transformers.utils import _LazyModule
 from transformers.utils.import_utils import define_import_structure
 
-
 if TYPE_CHECKING:
-    from .configuration_doge import *
-    from .modeling_doge import *
+    from .models import *
+    from .pt import *
 else:
     import sys
 
