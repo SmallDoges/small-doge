@@ -1,4 +1,4 @@
-# Copyright 2025 The SamllDoge Team. All rights reserved.
+# Copyright 2025 The SmallDoge Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,23 +23,27 @@ import transformers
 import torch
 
 from datasets import load_dataset
-from transformers import set_seed, AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM, TrainingArguments, Trainer, DataCollatorForLanguageModeling
+from transformers import set_seed, AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM
 from transformers.trainer_utils import get_last_checkpoint
 
-from samll_doge.models.configuration_doge import DogeConfig
-from samll_doge.models.modeling_doge import DogeModel, DogeForCausalLM
-
+from small_doge.models import DogeConfig
+from small_doge.models import DogeModel, DogeForCausalLM
 from trl import (
     ModelConfig,
     ScriptArguments,
+    SFTConfig,
+    SFTTrainer,
     TrlParser,
+    get_kbit_device_map,
+    get_peft_config,
+    get_quantization_config,
 )
 
 
 logger = logging.getLogger(__name__)
 
 
-def main(script_args, training_args, model_args, model_config):
+def main(script_args, training_args, model_args):
     # Set seed for reproducibility
     set_seed(training_args.seed)
 
@@ -74,11 +78,11 @@ def main(script_args, training_args, model_args, model_config):
     if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
         logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
 
-    ###############
+    ################
     # Load datasets
-    ###############
+    ################
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
-
+    
     ################
     # Load tokenizer
     ################
@@ -94,40 +98,28 @@ def main(script_args, training_args, model_args, model_config):
     torch_dtype = (
         model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
     )
+    quantization_config = get_quantization_config(model_args)
     model_kwargs = dict(
         revision=model_args.model_revision,
         trust_remote_code=model_args.trust_remote_code,
         attn_implementation=model_args.attn_implementation,
         torch_dtype=torch_dtype,
         use_cache=False if training_args.gradient_checkpointing else True,
+        device_map=get_kbit_device_map() if quantization_config is not None else None,
+        quantization_config=quantization_config,
     )
     training_args.model_init_kwargs = model_kwargs
 
-
-    ################################
-    # Initialize model
-    ################################
-    logger.info(f"Initializing model") 
-    config = DogeConfig(**model_config)
-    model = DogeForCausalLM(config=config)
-
-    model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.info(f"Model structure: {model}")
-    logger.info(f"Model parameters: {model_num_params}")
-
-    ################################
-    # Initialize the PT trainer
-    ################################
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer, mlm=False,
-    )
-    trainer = Trainer(
-        model=model,
+    ############################
+    # Initialize the SFT Trainer
+    ############################
+    trainer = SFTTrainer(
+        model=model_args.model_name_or_path,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         processing_class=tokenizer,
-        data_collator=data_collator,
+        peft_config=get_peft_config(model_args),
     )
 
     ###############
@@ -155,6 +147,7 @@ def main(script_args, training_args, model_args, model_config):
 
     # Save everything else on main process
     kwargs = {
+        "finetuned_from": model_args.model_name_or_path,
         "dataset": list(script_args.dataset_name),
         "dataset_tags": list(script_args.dataset_name),
         "tags": ["small-doge"],
@@ -197,13 +190,7 @@ def main(script_args, training_args, model_args, model_config):
     logger.info("*** Training finished! ***")
 
 
-if __name__ == '__main__':
-    model_config_parser = ArgumentParser()
-    model_config_parser.add_argument('--config', type=str, default='./recipes/doge/Doge-20M/config_full.yaml', help='path to yaml config file of PT')
-
-    parser = TrlParser((ScriptArguments, TrainingArguments, ModelConfig))
+if __name__ == "__main__":
+    parser = TrlParser((ScriptArguments, SFTConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
-    model_config = yaml.load(
-        open(model_config_parser.parse_args().config, 'r', encoding='utf-8'), 
-        Loader=yaml.FullLoader)['model_config']
-    main(script_args, training_args, model_args, model_config)
+    main(script_args, training_args, model_args)

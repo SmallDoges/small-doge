@@ -20,6 +20,7 @@ from transformers.utils.import_utils import define_import_structure
 if TYPE_CHECKING:
     from .models import *
     from .pt import *
+    from .sft import *
 else:
     import sys
 
