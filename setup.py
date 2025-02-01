@@ -21,7 +21,7 @@ __version__ = '0.1.0'
 REQUIRED_PACKAGES = [
     'torch',
     'datasets',
-    'transformers',
+    'transformers @ git+https://github.com/LoserCheems/transformers.git@support-constant-lr-with-cooldown',
     'accelerate',
     'trl',
     'sentencepiece',
