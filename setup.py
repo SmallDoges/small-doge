@@ -38,7 +38,7 @@ setup(
     long_description_content_type='text/markdown',
     author='Jingze Shi',
     author_email="losercheems@gmail.com",
-    url='https://github.com/SamllDoge/small-doge',
+    url='https://github.com/SmallDoges/small-doge',
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",

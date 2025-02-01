@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./assets/org_icon.png" alt="samlldoges" width="100%">
+    <img src="./assets/org_icon.png" alt="smalldoges" width="100%">
 </div>
 
 <div align="center">
@@ -66,7 +66,7 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 ## 安装
 
 ```bash
-git clone https://github.com/SamllDoge/small-doge.git
+git clone https://github.com/SmallDoges/small-doge.git
 cd small-doge
 pip install -e .
 ```
@@ -74,7 +74,7 @@ pip install -e .
 
 ## 使用
 
-我们已经编写了一个 [notebook](./examples/notebook.ipynb) (仍在更新) 来演示数据集处理、模型训练和模型评估的整个过程. 您还可以独立使用已经发布的模型.
+我们已经编写了一个 [notebook](./examples/notebook.ipynb) 和 [训练指南](./recipes/doge/README.md) (仍在更新) 来演示数据集处理、模型训练和模型评估的整个过程. 您还可以独立使用已经发布的模型.
 
 
 ## 已发布的模型

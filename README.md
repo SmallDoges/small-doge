@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./assets/org_icon.png" alt="samlldoges" width="100%">
+    <img src="./assets/org_icon.png" alt="smalldoges" width="100%">
 </div>
 
 <div align="center">
@@ -66,7 +66,7 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 ## Installation
 
 ```bash
-git clone https://github.com/SamllDoge/small-doge.git
+git clone https://github.com/SmallDoges/small-doge.git
 cd small-doge
 pip install -e .
 ```
@@ -74,7 +74,7 @@ pip install -e .
 
 ## Usage
 
-We have written a [notebook](./examples/notebook.ipynb) (still being updated) to demonstrate the entire process of datasets processing, model training, and model evaluation. You can also use the models that have been released independently.
+We have written a [notebook](./examples/notebook.ipynb) and [training guide](./recipes/doge/README.md) (still in progress) to demonstrate the entire process of datasets processing, model training, and model evaluation. You can also use the models that have been released independently.
 
 
 ## Models Released
