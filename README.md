@@ -40,8 +40,6 @@ We also hope to use open-source tools and frameworks as much as possible to simp
 
 ## Requirements
 
-
-
 - Windows or Linux
 - NVIDIA GPU
 - Python 3.10+
@@ -60,16 +58,13 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 - `pip install transformers`: The core framework for all subsequent work.
 - `pip install datasets sentencepiece boto3`: Used to download and process datasets.
 - `pip install accelerate`: Used for distributed training.
-- `pip install einx`: Fast implementation dependency for the CDMoE module.
+- `pip install trl`: Used for fine-tuning with reinforcement learning.
 
 ## Installation
 
-TODO
-
-<!-- 
 ```bash
-git clone https://github.com/LoserCheems/WonderfulMatrices.git
-cd WonderfulMatrices
+git clone https://github.com/SamllDoge/SmallDoges.git
+cd SmallDoges
 pip install -e .
 ```
 
@@ -78,111 +73,62 @@ pip install -e .
 We have written a [notebook](./examples/notebook.ipynb) (still being updated) to demonstrate the entire process of datasets processing, model training, and model evaluation. 
 You can use the following complete architecture or individual modules.
 
-### Cheems Architecture
+## Models Released
 
-![Cheems](./assets/cheems_architecture.png)
+### Doge-CheckPoint
 
-The modeling code of the Cheems architecture.
+![wsd_scheduler](./assets/wsd_scheduler.png)
 
-Source code: [modeling_cheems.py](./src/wonderful_matrices/models/modeling_cheems.py)
+Doge uses `wsd_scheduler` as the training scheduler, which divides the learning rate into three stages: `warmup`, `stable`, and `decay`. It allows us to continue training on any new dataset from any checkpoint in the `stable stage` without spikes of the training.
 
-Usage:
+Here are the initial learning rates required to continue training at each checkpoint:
 
-```python
-import torch
-from wonderful_matrices.models.configuration_cheems import CheemsConfig
-from wonderful_matrices.models.modeling_cheems import CheemsForCausalLM
-from transformers import AutoTokenizer
+- **[Doge-20M](https://huggingface.co/SmallDoge/Doge-20M-checkpoint)**: 8e-3
+- **[Doge-60M](https://huggingface.co/SmallDoge/Doge-60M-checkpoint)**: 6e-3
+- **[Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint)**: 4e-3
+- **Doge-320M**: 2e-3
 
-tokenizer = AutoTokenizer.from_pretrained("<your_model_path_or_name>")
-config = CheemsConfig()
-model = CheemsForCausalLM(config)
-input_ids = tokenizer("Hi, how are you today?", return_tensors="pt")
-outputs = model.generate(**input_ids, max_length=100)
-print(tokenizer.batch_decode(outputs))
-```
+| Model | Learning Rate | Schedule | Warmup Steps | Stable Steps |
+|-------|---------------|----------|--------------|--------------|
+| Doge-20M | 8e-3 | wsd_scheduler | 800 | 6400 |
+| Doge-60M | 6e-3 | wsd_scheduler | 1600 | 12800 |
+| Doge-160M | 4e-3 | wsd_scheduler | 2400 | 19200 |
+| Doge-320M | 2e-3 | wsd_scheduler | 3200 | 25600 |
 
-### Doge Architecture
+### Doge-SLM
 
-![Doge](./assets/doge_architecture.png)
+**Pre-Training**:
 
-The modeling code of the Doge architecture.
+| Model | Training Data | Steps | Content Length | Tokens | LR | Batch Size | Precision |
+|---|---|---|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 |
+| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 |
 
-Source code: [modeling_doge.py](./src/wonderful_matrices/models/modeling_doge.py)
+**Evaluation**:
 
-Usage:
+| Model | MMLU | TriviaQA | ARC-E | ARC-C | PIQA | HellaSwag | OBQA | Winogrande | tokens / s on CPU |
+|---|---|---|---|---|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | 25.43 | 0.03 | 36.83 | 22.78 | 58.38 | 27.25 | 25.60 | 50.20 | 142 |
+| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.41 | 0.18 | 50.46 | 25.34 | 61.43 | 31.45 | 28.00 | 50.75 | 62 |
 
-```python
-import torch
-from wonderful_matrices.models.configuration_doge import DogeConfig
-from wonderful_matrices.models.modeling_doge import DogeForCausalLM
-from transformers import AutoTokenizer
+> All evaluations are done using five-shot settings, without additional training on the benchmarks.
 
-tokenizer = AutoTokenizer.from_pretrained("<your_model_path_or_name>")
-config = DogeConfig()
-model = DogeForCausalLM(config)
-input_ids = tokenizer("Hi, how are you today?", return_tensors="pt")
-outputs = model.generate(**input_ids, max_length=100)
-print(tokenizer.batch_decode(outputs))
-```
+**SFT**:
+| Model | Training Data | Epochs | Content Length | LR | Batch Size | Precision |
+|---|---|---|---|---|---|---|
+| [Doge-20M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-20M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 8e-4 | 0.25M | bfloat16 |
+| [Doge-60M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-60M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 6e-4 | 0.25M | bfloat16 |
 
-### Dynamic Mask Attention Module
+**DPO**:
+| Model | Training Data | Epochs | Content Length | LR | Batch Size | Precision |
+|---|---|---|---|---|---|---|
+| [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
+| [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
 
-![DMAttn](./assets/dmattn.png)
-![DMAttn](./assets/mqar.png)
-
-The sequence transformation module of the Doge model.
-
-Source code: [dmattn.py](./src/wonderful_matrices/modules/dmattn.py)
-
-Usage:
-
-```python
-import torch
-from wonderful_matrices.modules.dmattn import DMAttn
-
-batch, seq_len, dim = 2, 16, 64
-x = torch.rand(batch, seq_len, dim)
-attention_mask = torch.ones(batch, seq_len)
-attn = DMAttn(
-    d_model=dim,
-    n_heads=1,
-    max_position_embeddings=seq_len,
-    layer_idx=0,
-)
-y, past_key_values = attn(x, attention_mask)
-print(f"Input shape: {x.shape}, Output shape: {y.shape}")
-```
-
-### Cross Domain Mixture of Experts Module
-
-![CDMoE](./assets/cdmoe.png)
-![CDMoE](./assets/merm.png)
-
-The state transformation module of the Doge model.
-
-Source code: [cdmoe.py](./src/wonderful_matrices/modules/cdmoe.py)
-
-Usage:
-
-```python
-import torch
-from wonderful_matrices.modules.cdmoe import CDMoE
-
-batch, seq_len, dim = 2, 16, 64
-x = torch.rand(batch, seq_len, dim)
-cdmoe = CDMoE(
-    d_model=dim,
-    act_fn="silu",
-    d_ff=dim * 4,
-    d_private_expert_retrieval=64,
-    n_experts=64,
-    n_experts_heads=1,
-    n_experts_per_head=2,
-)
-y = cdmoe(x)
-print(f"Input shape: {x.shape}, Output shape: {y.shape}")
-```
+**Environment**:
+- Image: nvcr.io/nvidia/pytorch:24.12-py3
+- Hardware: 1x NVIDIA RTX 4090
+- Software: Transformers, TRL
 
 ## Citation
 
@@ -199,5 +145,3 @@ If you use this codebase, or otherwise find our work valuable, please cite our p
       url={https://arxiv.org/abs/2412.11834}, 
 }
 ```
-
- -->
