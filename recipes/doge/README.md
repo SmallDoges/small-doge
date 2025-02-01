@@ -1,5 +1,13 @@
 # Instructions to train Doge
 
+<div align="center">
+<h4>
+
+English | [简体中文](https://github.com/SamllDoge/small-doge/blob/main/recipes/doge/README_zh.md)
+
+</h4>
+</div>
+
 We provide detailed steps to train Doge in this guide, including pre-training Doge, instruction fine-tuning Doge-Instruct, and reasoning fine-tuning Doge-R1.
 
 

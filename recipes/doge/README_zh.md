@@ -1,5 +1,13 @@
 # Doge训练指南
 
+<div align="center">
+<h4>
+
+[English](https://github.com/SamllDoge/small-doge/blob/main/recipes/doge/README.md) | 简体中文
+
+</h4>
+</div>
+
 我们在本指南中提供了训练Doge的详细步骤, 包括预训练的Doge, 指令微调的Doge-Instruct, 以及将要更新的推理微调的Doge-R1.
 
 
