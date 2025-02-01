@@ -37,7 +37,7 @@ model_name_or_path: SmallDoge/Doge-20M
 torch_dtype: bfloat16
 
 # Data training arguments
-dataset_name: ./datasets/pretrain_dataset
+dataset_name: ./datasets/pt_dataset
 dataset_configs:
 - all
 preprocessing_num_workers: 8
