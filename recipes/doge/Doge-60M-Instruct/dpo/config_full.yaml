@@ -37,8 +37,6 @@ eval_strategy: steps
 eval_steps: 100
 per_device_eval_batch_size: 1
 optim: adamw_torch
-beta: 0.5
-loss_type: sigmoid
 learning_rate: 6.0e-4
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
