@@ -30,7 +30,7 @@ REQUIRED_PACKAGES = [
 file_path = os.path.abspath(os.path.dirname(__file__))
 
 setup(
-    name='samll_doge',
+    name='small_doge',
     license='Apache 2.0',
     version=__version__,
     description="A Family of Dynamic Ultra-Fast Small Language Models Ready for Embodied Artificial General Intelligence!",

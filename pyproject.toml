@@ -1,5 +1,5 @@
 [project]
-name = "samll_doge"
+name = "small_doge"
 description = "A Family of Dynamic Ultra-Fast Small Language Models Ready for Embodied Artificial General Intelligence!"
 readme = "README.md"
 authors = [
