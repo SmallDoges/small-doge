@@ -38,7 +38,7 @@ setup(
     long_description_content_type='text/markdown',
     author='Jingze Shi',
     author_email="losercheems@gmail.com",
-    url='https://github.com/LoserCheems/WonderfulMatrices',
+    url='https://github.com/SamllDoge/SmallDoges',
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
@@ -53,5 +53,5 @@ setup(
     install_requires=REQUIRED_PACKAGES,
     python_requires='>=3.9',
     zip_safe=False,
-    keywords=['SmallDoges', 'doge', 'SLM', 'pytorch', 'transformers', 'trl'],
+    keywords=['smalldoges', 'doge', 'small language models', 'pytorch', 'transformers', 'trl'],
 )
