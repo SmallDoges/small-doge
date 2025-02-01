@@ -181,7 +181,9 @@ def main(script_args, training_args, model_args):
     DogeModel.register_for_auto_class("AutoModel")
     DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
     tokenizer = AutoTokenizer.from_pretrained(f'{training_args.output_dir}')
+    tokenizer.save_pretrained(f'{training_args.output_dir}')
     model = AutoModelForCausalLM.from_pretrained(f'{training_args.output_dir}')
+    model.save_pretrained(f'{training_args.output_dir}')
 
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
