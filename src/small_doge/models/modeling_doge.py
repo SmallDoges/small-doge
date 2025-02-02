@@ -28,11 +28,14 @@ from typing import Callable, List, Optional, Tuple, Union
 import torch
 import torch.nn.functional as F
 from torch import nn
-
 from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.generation import GenerationMixin
-from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
+from transformers.modeling_outputs import (
+    BaseModelOutputWithPast,
+    CausalLMOutputWithPast,
+    SequenceClassifierOutputWithPast,
+)
 from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
 from transformers.modeling_utils import PreTrainedModel
 from transformers.processing_utils import Unpack
@@ -45,6 +48,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.utils.deprecation import deprecate_kwarg
+
 from .configuration_doge import DogeConfig
 
 

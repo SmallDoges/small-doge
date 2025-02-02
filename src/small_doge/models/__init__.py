@@ -19,10 +19,18 @@ from transformers.utils.import_utils import define_import_structure
 
 
 if TYPE_CHECKING:
-    from .configuration_doge import *
-    from .modeling_doge import *
+    from .configuration_doge import DogeConfig
+    from .modeling_doge import DogeForCausalLM, DogeForSequenceClassification, DogeModel, DogePreTrainedModel
 else:
     import sys
 
     _file = globals()["__file__"]
     sys.modules[__name__] = _LazyModule(__name__, _file, define_import_structure(_file), module_spec=__spec__)
+
+__all__ = [
+    "DogeConfig",
+    "DogeForCausalLM",
+    "DogeForSequenceClassification",
+    "DogeModel",
+    "DogePreTrainedModel",
+]
