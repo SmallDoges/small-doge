@@ -15,9 +15,7 @@
 import logging
 import sys
 import os
-from argparse import ArgumentParser
 
-import yaml
 import datasets
 import transformers
 import torch
@@ -26,8 +24,7 @@ from datasets import load_dataset
 from transformers import set_seed, AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM
 from transformers.trainer_utils import get_last_checkpoint
 
-from small_doge.models import DogeConfig
-from small_doge.models import DogeModel, DogeForCausalLM
+from small_doge.models import DogeConfig, DogeModel, DogeForCausalLM
 from trl import (
     ModelConfig,
     ScriptArguments,
@@ -78,9 +75,9 @@ def main(script_args, training_args, model_args):
     if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
         logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
 
-    ################
+    ###############
     # Load datasets
-    ################
+    ###############
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
     
     ################
@@ -185,6 +182,9 @@ def main(script_args, training_args, model_args):
     model = AutoModelForCausalLM.from_pretrained(f'{training_args.output_dir}')
     model.save_pretrained(f'{training_args.output_dir}')
 
+    #############
+    # push to hub
+    #############
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
         trainer.push_to_hub(**kwargs)
