@@ -1,66 +1,56 @@
 <div align="center">
-    <img src="./assets/org_icon.png" alt="samlldoges" width="100%">
+  <img src="./assets/org_icon.png" alt="samlldoges" width="100%">
 </div>
+
+<hr>
 
 <div align="center">
 
 ![visitors](https://visitor-badge.laobi.icu/badge?page_id=SmallDoges/small-doge)
 [![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2412.11834&color=B31B1B&logo=arXiv)](https://arxiv.org/abs/2412.11834)
 [![huggingface](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-FFD21E)](https://huggingface.co/collections/SmallDoge/doge-slm-679cc991f027c4a3abbded4a)
-[![GitHub last commit](https://img.shields.io/github/last-commit/SmallDoges/small-doge)](https://github.com/SmallDoges/small-doge/commits/master)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
-[![GitHub pull request](https://img.shields.io/badge/PRs-welcome-blue)](https://github.com/SmallDoges/small-doge/pulls)
 
-
-<div align="center">
-  <h3>"Small Doges is under construction, let's develop together!"</h3>
-</div>
-
-<div align="center">
+*Small Doges is under construction, let's develop together!🐕🐕🐕*
 
 English | [简体中文](./README_zh.md)
 
 </div>
 
-* This open-source project aims to start completely from scratch, and in just 3 hours, you can train a micro language model **Doge** with a size of only 13M.
-* The **small doge** series is extremely lightweight, with the smallest version being approximately $\frac{1}{7877}$ the size of GPT-3, striving to enable fast inference and even training on the most ordinary personal GPUs.
-* **small doge** has released the full-stage code for the large model doge structure, dataset cleaning and preprocessing, supervised pre-training (Pretrain), supervised fine-tuning (SFT), direct preference optimization (DPO) without reward reinforcement learning, and visual multimodal VLM (under development).
-* Standing on the shoulders of giants allows us to see further. We hope that the small doge series of small models can provide more ideas for researchers and contribute to the path of achieving AGI.
+* This project aims to train a series of dynamic and fast small models from scratch, with the fastest training time of only 3 hours! You can train a tiny language model [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) in just 13M!🚀
+* The small doge series is extremely lightweight, with the smallest version being about **$\frac{1}{7800}$** the size of GPT3, and strives to make even the most ordinary personal GPU capable of fast inference and even training.🏎️
+* We provide full-stage code for dataset preprocessing, pre-training, supervised fine-tuning, reinforcement learning preference alignment, visual multimodal VLM (under development), and inference fine-tuning R1 (under development).🧪
+* Standing on the shoulders of giants can see further, we hope that the small doge series of small models can provide researchers with more ideas and contribute to the road to achieving **Embodied Artificial General Intelligence**.🤖
 
-  > We hope to simplify the process from data processing to model training as much as possible using open-source tools and frameworks, so that beginners can easily understand and use them. Detailed specifications will be provided below.
+  > [!TIP]
+  > We hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use.🤗
 
 <div align="center">
     <img src="./assets/reasoning.gif" alt="streamlit"/>
-    <figcaption>Doge-60M-Instruct CPU Fast Inference</figcaption>
-</div>
+    <figcaption>Doge-60M-Instruct on an 11th gen i7 CPU notebook for fast inference</figcaption>
 
 ---
 
-# 📌 Introduction
+# small-doge
 
-Currently, large language models such as GPT-4 and Deepseek have achieved remarkable results in the field of natural language processing and have attracted significant attention. However, in practical applications and research, large models face many issues. On one hand, they require high computational infrastructure, making it difficult to deploy in resource-constrained scenarios such as mobile devices and edge computing, and they have poor interpretability, limiting their application in fields like healthcare and finance. On the other hand, large-scale investments raise the research threshold, and training data often contain biases and prejudices.
+## About
 
-Meanwhile, embodied intelligence has broad development prospects, emphasizing intelligent agents interacting with the physical environment to achieve intelligent decision-making, with great potential in fields such as smart homes and logistics robots. However, due to their inherent limitations, large language models struggle with tasks related to embodied intelligence.
-
-In contrast, small models have unique advantages in the development of embodied intelligence. They require fewer computational resources and can run on ordinary or small embedded devices, allowing intelligent agents to work flexibly in resource-constrained environments and meet real-time response needs. Moreover, small models have simple structures and strong interpretability, making it easier for engineers to link model decisions with agent actions and optimize their behavior. Additionally, small models require less training data, reducing data bias and facilitating precise training of intelligent agents in specific scenarios.
-
-Therefore, the goal of this project is to create a series of efficient, fast, and stable small models to promote the application and implementation in downstream fields as much as possible.
+This project aims to develop a series of dynamic and fast small models to promote their application in the field of embodied intelligence, especially in resource-constrained environments, to meet real-time response needs, and to promote the practical application of downstream fields.
 
 > [!TIP]
->  (As of 2025-2-2) The small doge series has completed the pre-training of two model types, with the smallest requiring only 20M (0.02B) and capable of fluent conversation!
+> *As of 2025-2-2*: The small doge series has completed the pre-training of 2 model models, with a minimum of 20M, which can have smooth conversation capabilities!
 
 | Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
 |---|---|---|---|---|---|---|---|---|---|
 | Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 | Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 | |
 
-> The above two models are currently in pre-training (researchers with the capability are welcome to help)
+> The following two models are currently in pre-training, and researchers with the capability are welcome to help(poor man's cry)!🙏
 
 | Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
 |---|---|---|---|---|---|---|---|---|---|
 | Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 | Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-
 
 <div align="center">
     <img src="./assets/doge_architecture.png" alt="drawing" width="600"/>
@@ -78,11 +68,10 @@ As shown in the figure, the sequence transformation part of the Doge architectur
 ![CDMoE](./assets/cdmoe.png)
 ![CDMoE](./assets/merm.png)
 
-We also hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use them.
 
+## Requirements
 
-# 📌 environment
-This is just a personal hardware and software configuration, please adjust as needed:
+Our codebase requires the following environment:
 
 - Windows or Linux
 - NVIDIA GPU
@@ -108,18 +97,18 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 ## Installation
 
 ```bash
-git clone https://github.com/SamllDoge/small-doge.git
+git clone https://github.com/SamllDoges/small-doge.git
 cd small-doge
 pip install -e .
 ```
 
 
-## Quick Start Train
+## Quick Start
 
-We have written a [notebook](./examples/notebook.ipynb) (still being updated) to demonstrate the entire process of datasets processing, model training, and model evaluation. You can also use the models that have been released independently,If you are interested, please read the notebook in detail, which contains specific steps and details!
+We have written a [notebook](./examples/notebook.ipynb) and a [training guide](./recipes/doge/README.md) to demonstrate the entire process of dataset processing, model training, and model evaluation. You can also use the models that have been released independently. If you are interested, please read the notebook or training guide in detail, which contains specific steps and details!
 
 
-# 📌Models Released
+## Models Released
 
 ### Doge-CheckPoint
 
@@ -170,12 +159,13 @@ Here are the initial learning rates required to continue training at each checkp
 | [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
 
 **Environment**:
+
 - Image: nvcr.io/nvidia/pytorch:24.12-py3
 - Hardware: 1x NVIDIA RTX 4090
 - Software: Transformers, TRL
 
 
-# 📌引用
+# Citation
 
 If you use this codebase, or otherwise find our work valuable, please cite our paper:
 
