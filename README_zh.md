@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./assets/org_icon.png" alt="samlldoges" width="100%">
+   <img src="./assets/org_icon.png" alt="smalldoges" width="100%">
 </div>
 
 <hr>
@@ -99,7 +99,7 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 ## 安装
 
 ```bash
-git clone https://github.com/SamllDoges/small-doge.git
+git clone https://github.com/SmallDoges/small-doge.git
 cd small-doge
 pip install -e .
 ```

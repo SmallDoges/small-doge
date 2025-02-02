@@ -25,7 +25,7 @@ dependencies = [
     "trl",
     "sentencepiece",
 ]
-urls = { name = "Repository", url = "https://github.com/SamllDoge/small-doge"}
+urls = { name = "Repository", url = "https://github.com/SmallDoges/small-doge"}
 
 [build-system]
 requires = [

@@ -97,7 +97,7 @@ docker run --privileged --gpus all -it --name PyTorch --shm-size=32g -p 8888:888
 ## Installation
 
 ```bash
-git clone https://github.com/SamllDoges/small-doge.git
+git clone https://github.com/SmallDoges/small-doge.git
 cd small-doge
 pip install -e .
 ```
