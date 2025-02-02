@@ -24,23 +24,14 @@ import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch import nn
-
-from transformers.models.llama.modeling_llama import (
-    LlamaForSequenceClassification,
-    LlamaRMSNorm,
-    LlamaRotaryEmbedding,
-)
-
 from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.configuration_utils import PretrainedConfig
 from transformers.generation import GenerationMixin
-from transformers.modeling_outputs import (
-    BaseModelOutputWithPast,
-    CausalLMOutputWithPast,
-)
+from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from transformers.modeling_rope_utils import rope_config_validation
 from transformers.modeling_utils import PreTrainedModel
+from transformers.models.llama.modeling_llama import LlamaForSequenceClassification, LlamaRMSNorm, LlamaRotaryEmbedding
 from transformers.processing_utils import Unpack
 from transformers.utils import (
     LossKwargs,

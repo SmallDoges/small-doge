@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import re
 import shutil
 from pathlib import Path
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
-__version__ = '0.1.0'
+
+__version__ = "0.1.0"
 
 # Remove stale small_doge.egg-info directory to avoid https://github.com/pypa/pip/issues/5466
 stale_egg_info = Path(__file__).parent / "small_doge.egg-info"
@@ -60,9 +60,9 @@ _deps = [
     "pytest",
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
-    'torch>=2.5.1',
-    'transformers @ git+https://github.com/LoserCheems/transformers.git@support-constant-lr-with-cooldown',
-    'trl @ git+https://github.com/huggingface/trl.git@main',
+    "torch>=2.5.1",
+    "transformers @ git+https://github.com/LoserCheems/transformers.git@support-constant-lr-with-cooldown",
+    "trl @ git+https://github.com/huggingface/trl.git@main",
     "vllm>=0.7.0",
     "wandb>=0.19.1",
 ]
@@ -75,8 +75,10 @@ _deps = [
 # some of the values are versioned whereas others aren't.
 deps = {b: a for a, b in (re.findall(r"^(([^!=<>~ \[\]]+)(?:\[[^\]]+\])?(?:[!=<>~ ].*)?$)", x)[0] for x in _deps)}
 
+
 def deps_list(*pkgs):
     return [deps[pkg] for pkg in pkgs]
+
 
 extras = {}
 extras["tests"] = deps_list("pytest", "parameterized")
@@ -104,21 +106,21 @@ install_requires = [
 ]
 
 setup(
-    name='small_doge',
-    license='Apache 2.0',
+    name="small_doge",
+    license="Apache 2.0",
     version=__version__,
     description="A Family of Dynamic Ultra-Fast Small Language Models Ready for Embodied Artificial General Intelligence!",
-    long_description=open('README.md', "r", encoding='utf-8').read(),
-    long_description_content_type='text/markdown',
-    author='SmallDoge Team',
+    long_description=open("README.md", "r", encoding="utf-8").read(),
+    long_description_content_type="text/markdown",
+    author="SmallDoge Team",
     author_email="losercheems@gmail.com",
-    url='https://github.com/SmallDoges/small-doge',
-    package_dir={'': 'src'},
-    packages=find_packages(where='src'),
+    url="https://github.com/SmallDoges/small-doge",
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
     zip_safe=False,
     extras_require=extras,
     install_requires=install_requires,
-    python_requires='>=3.10.9',
+    python_requires=">=3.10.9",
     classifiers=[
         "Intended Audience :: Developers",
         "Intended Audience :: Education",
@@ -131,5 +133,5 @@ setup(
         "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    keywords=['small-doge', 'doge', 'small language models', 'pytorch', 'transformers', 'trl', 'r1', 'sft', 'dpo'],
+    keywords=["small-doge", "doge", "small language models", "pytorch", "transformers", "trl", "r1", "sft", "dpo"],
 )

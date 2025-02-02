@@ -21,20 +21,13 @@ from dataclasses import dataclass, field
 import datasets
 import transformers
 from datasets import load_dataset
-from transformers import set_seed, AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM
+from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
+
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
-
 from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
-from trl import (
-    GRPOConfig,
-    GRPOTrainer,
-    ModelConfig,
-    ScriptArguments,
-    TrlParser,
-    get_peft_config
-)
+from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
 logger = logging.getLogger(__name__)
@@ -206,7 +199,7 @@ def main(script_args, training_args, model_args):
         # Restore k,v cache for fast inference
         trainer.model.config.use_cache = True
         trainer.model.config.save_pretrained(training_args.output_dir)
-    
+
     logger.info("*** Training complete ***")
 
     ##########
@@ -229,10 +222,10 @@ def main(script_args, training_args, model_args):
     DogeConfig.register_for_auto_class()
     DogeModel.register_for_auto_class("AutoModel")
     DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
-    tokenizer = AutoTokenizer.from_pretrained(f'{training_args.output_dir}')
-    tokenizer.save_pretrained(f'{training_args.output_dir}')
-    model = AutoModelForCausalLM.from_pretrained(f'{training_args.output_dir}')
-    model.save_pretrained(f'{training_args.output_dir}')
+    tokenizer = AutoTokenizer.from_pretrained(f"{training_args.output_dir}")
+    tokenizer.save_pretrained(f"{training_args.output_dir}")
+    model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")
+    model.save_pretrained(f"{training_args.output_dir}")
 
     #############
     # push to hub
@@ -242,6 +235,7 @@ def main(script_args, training_args, model_args):
         trainer.push_to_hub(**kwargs)
 
     logger.info("*** Training finished! ***")
+
 
 if __name__ == "__main__":
     parser = TrlParser((GRPOScriptArguments, GRPOConfig, ModelConfig))
