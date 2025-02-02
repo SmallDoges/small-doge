@@ -23,6 +23,8 @@
 
 # small-doge
 
+**News**: 🎉🎉🎉 We now support the full training process of **pre-trained Doge-Base**, **instruction fine-tuned Doge-Instruct**, and **reasoning fine-tuned Doge-R1**, please refer to the [guide](./recipes/doge/README.md)!
+
 * This project aims to train a series of dynamic and fast small models from scratch, with the fastest training time of only 3 hours! You can train a tiny language model [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) in just 13M!🚀
 * The small doge series is extremely lightweight, with the smallest version being about **$\frac{1}{7800}$** the size of GPT3, and strives to make even the most ordinary personal GPU capable of fast inference and even training.🏎️
 * We provide full-stage code for dataset preprocessing, pre-training, supervised fine-tuning, reinforcement learning preference alignment, visual multimodal VLM (under development), and inference fine-tuning R1 (under development).🧪
