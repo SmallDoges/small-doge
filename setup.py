@@ -44,13 +44,14 @@ _deps = [
     "bitsandbytes>=0.43.0",
     "ruff>=0.9.0",
     "datasets>=3.2.0",
+    "deepspeed==0.15.4",
     "distilabel[vllm,ray,openai]>=1.5.2",
     "einops>=0.8.0",
     "flake8>=6.0.0",
     "hf_transfer>=0.1.4",
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
-    "liger_kernel==0.5.2",
+    "lighteval @ git+https://github.com/huggingface/lighteval.git@main",
     "math-verify>=0.3.3",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
@@ -91,7 +92,6 @@ install_requires = [
     deps["datasets"],
     deps["hf_transfer"],
     deps["huggingface-hub"],
-    deps["liger_kernel"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
     deps["safetensors"],
     deps["sentencepiece"],
