@@ -39,7 +39,7 @@ English | [简体中文](https://github.com/SamllDoge/small-doge/blob/main/recip
 
 ## 1. Installation
 
-Please follow the instructions in [README](../README.md) to install the necessary dependencies.
+Please follow the instructions in [README](https://github.com/SmallDoges/small-doge/blob/main/README.md) to install the necessary dependencies.
 
 
 ## 2. Pre-training Base model

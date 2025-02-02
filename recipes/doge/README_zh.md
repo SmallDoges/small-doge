@@ -39,7 +39,7 @@
 
 ## 1. 安装
 
-请按照[README](../README.md)中的说明安装必要的依赖项.
+请按照[README](https://github.com/SmallDoges/small-doge/blob/main/README_zh.md)中的说明安装必要的依赖项.
 
 
 ## 2. 预训练Base模型
