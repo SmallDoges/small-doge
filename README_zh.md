@@ -1,25 +1,58 @@
 <div align="center">
-    <img src="./assets/org_icon.png" alt="smalldoges" width="100%">
+   <img src="./assets/org_icon.png" alt="smalldoges" width="100%">
 </div>
+
+<hr>
 
 <div align="center">
 
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=SmallDoges/small-doge)
 [![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2412.11834&color=B31B1B&logo=arXiv)](https://arxiv.org/abs/2412.11834)
 [![huggingface](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-FFD21E)](https://huggingface.co/collections/SmallDoge/doge-slm-679cc991f027c4a3abbded4a)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 
-<h4>
-
-**Small Doges 正在建设中, 让我们一起开发吧!**
+*Small Doges 正在建设中, 让我们一起开发吧!🐕🐕🐕*
 
 [English](./README.md) | 简体中文
 
-</h4>
-
 </div>
+
+* 本项目旨在从**0**开始, 最快仅用3小时！即可训练出仅为13M大小的微型语言模型[Doge-20M](https://huggingface.co/SmallDoge/Doge-20M)!🚀
+* small doge系列极其轻量, 最小版本体积约是 GPT3 的 **$\frac{1}{7800}$**, 力求做到最普通的个人GPU也可快速推理甚至训练.🏎️
+* 我们提供了数据集预处理、预训练、监督微调、强化学习偏好对齐的全阶段代码、视觉多模态VLM(正在开发)和推理微调R1(正在开发).🧪
+* 站在巨人的肩膀上可以看的更远, 希望small doge系列小模型能为研究者提供更多思路, 为实现**具身通用人工智能**的道路添砖加瓦.🤖
+
+  > [!TIP]
+  > 我们希望尽可能使用开源工具和框架来简化从数据处理到模型训练的过程, 以便初学者可以轻松理解和使用.🤗
+
+<div align="center">
+    <img src="./assets/reasoning.gif" alt="streamlit"/>
+    <figcaption>Doge-60M-Instruct 在 11 代 i7 CPU 笔记本上快速推理</figcaption>
+</div>
+
+---
+
+# small-doge
 
 
 ## 关于
+
+本项目旨在开发一系列动态快速的小型模型, 以促进其在具身智能领域的应用, 特别是在资源受限的环境下, 满足实时响应需求, 推动下游领域的实际应用落地.
+
+> [!TIP]
+> *截至2025-2-2*: small doge系列已完成了2个型号模型的预训练, 最小仅需20M, 即可具备流畅的对话能力!
+
+| Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
+|---|---|---|---|---|---|---|---|---|---|
+| Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
+| Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
+
+> 以下两个型号正在预训练, 欢迎有能力的研究员帮忙(poor man的哀嚎)!🙏
+
+| Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
+|---|---|---|---|---|---|---|---|---|---|
+| Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
+| Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 
 <div align="center">
     <img src="./assets/doge_architecture.png" alt="drawing" width="600"/>
@@ -37,10 +70,10 @@
 ![CDMoE](./assets/cdmoe.png)
 ![CDMoE](./assets/merm.png)
 
-我们还希望尽可能使用开源工具和框架来简化从数据处理到模型训练的过程, 以便初学者可以轻松理解和使用.
 
+## 安装要求
 
-## 要求
+我们的代码库需要以下环境:
 
 - Windows 或 Linux
 - NVIDIA GPU
@@ -48,7 +81,7 @@
 - PyTorch 2.0+
 - CUDA 11.8+
 
-我们强烈建议您安装最新版本的 PyTorch 和 CUDA 以获得最佳性能.
+但我们仍然强烈建议您安装最新版本的 PyTorch 和 CUDA 以获得最佳性能.
 
 当然, 您也可以使用开源的 [Docker PyTorch](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) 镜像来避免配置环境的麻烦.
 
@@ -72,12 +105,12 @@ pip install -e .
 ```
 
 
-## 使用
+## 快速入门
 
-我们已经编写了一个 [notebook](./examples/notebook.ipynb) 和 [训练指南](./recipes/doge/README.md) (仍在更新) 来演示数据集处理、模型训练和模型评估的整个过程. 您还可以独立使用已经发布的模型.
+我们已经编写了一个 [notebook](./examples/notebook.ipynb) 和 [训练指南](./recipes/doge/README.md) 来演示数据集处理、模型训练和模型评估的整个过程. 您还可以独立使用已经发布的模型, 如果感兴趣请详细阅读notebook或训练指南, 里面有具体的步骤和细节！
 
 
-## 已发布的模型
+## 型号发布
 
 ### Doge-CheckPoint
 
@@ -128,6 +161,7 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 | [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
 
 **环境**:
+
 - 镜像: nvcr.io/nvidia/pytorch:24.12-py3
 - 硬件: 1x NVIDIA RTX 4090
 - 软件: Transformers, TRL

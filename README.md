@@ -1,25 +1,56 @@
 <div align="center">
-    <img src="./assets/org_icon.png" alt="smalldoges" width="100%">
+  <img src="./assets/org_icon.png" alt="samlldoges" width="100%">
 </div>
+
+<hr>
 
 <div align="center">
 
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=SmallDoges/small-doge)
 [![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2412.11834&color=B31B1B&logo=arXiv)](https://arxiv.org/abs/2412.11834)
 [![huggingface](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-FFD21E)](https://huggingface.co/collections/SmallDoge/doge-slm-679cc991f027c4a3abbded4a)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 
-<h4>
-
-**Small Doges is under construction, let's develop together!**
+*Small Doges is under construction, let's develop together!🐕🐕🐕*
 
 English | [简体中文](./README_zh.md)
 
-</h4>
-
 </div>
 
+* This project aims to train a series of dynamic and fast small models from scratch, with the fastest training time of only 3 hours! You can train a tiny language model [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) in just 13M!🚀
+* The small doge series is extremely lightweight, with the smallest version being about **$\frac{1}{7800}$** the size of GPT3, and strives to make even the most ordinary personal GPU capable of fast inference and even training.🏎️
+* We provide full-stage code for dataset preprocessing, pre-training, supervised fine-tuning, reinforcement learning preference alignment, visual multimodal VLM (under development), and inference fine-tuning R1 (under development).🧪
+* Standing on the shoulders of giants can see further, we hope that the small doge series of small models can provide researchers with more ideas and contribute to the road to achieving **Embodied Artificial General Intelligence**.🤖
+
+  > [!TIP]
+  > We hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use.🤗
+
+<div align="center">
+    <img src="./assets/reasoning.gif" alt="streamlit"/>
+    <figcaption>Doge-60M-Instruct on an 11th gen i7 CPU notebook for fast inference</figcaption>
+
+---
+
+# small-doge
 
 ## About
+
+This project aims to develop a series of dynamic and fast small models to promote their application in the field of embodied intelligence, especially in resource-constrained environments, to meet real-time response needs, and to promote the practical application of downstream fields.
+
+> [!TIP]
+> *As of 2025-2-2*: The small doge series has completed the pre-training of 2 model models, with a minimum of 20M, which can have smooth conversation capabilities!
+
+| Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
+|---|---|---|---|---|---|---|---|---|---|
+| Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
+| Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 | |
+
+> The following two models are currently in pre-training, and researchers with the capability are welcome to help(poor man's cry)!🙏
+
+| Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
+|---|---|---|---|---|---|---|---|---|---|
+| Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
+| Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 
 <div align="center">
     <img src="./assets/doge_architecture.png" alt="drawing" width="600"/>
@@ -37,10 +68,10 @@ As shown in the figure, the sequence transformation part of the Doge architectur
 ![CDMoE](./assets/cdmoe.png)
 ![CDMoE](./assets/merm.png)
 
-We also hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use them.
-
 
 ## Requirements
+
+Our codebase requires the following environment:
 
 - Windows or Linux
 - NVIDIA GPU
@@ -72,9 +103,9 @@ pip install -e .
 ```
 
 
-## Usage
+## Quick Start
 
-We have written a [notebook](./examples/notebook.ipynb) and [training guide](./recipes/doge/README.md) (still in progress) to demonstrate the entire process of datasets processing, model training, and model evaluation. You can also use the models that have been released independently.
+We have written a [notebook](./examples/notebook.ipynb) and a [training guide](./recipes/doge/README.md) to demonstrate the entire process of dataset processing, model training, and model evaluation. You can also use the models that have been released independently. If you are interested, please read the notebook or training guide in detail, which contains specific steps and details!
 
 
 ## Models Released
@@ -128,12 +159,13 @@ Here are the initial learning rates required to continue training at each checkp
 | [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
 
 **Environment**:
+
 - Image: nvcr.io/nvidia/pytorch:24.12-py3
 - Hardware: 1x NVIDIA RTX 4090
 - Software: Transformers, TRL
 
 
-## Citation
+# Citation
 
 If you use this codebase, or otherwise find our work valuable, please cite our paper:
 
