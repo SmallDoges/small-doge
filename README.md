@@ -17,6 +17,8 @@ English | [简体中文](./README_zh.md)
 
 </div>
 
+# small-doge
+
 * This project aims to train a series of dynamic and fast small models from scratch, with the fastest training time of only 3 hours! You can train a tiny language model [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) in just 13M!🚀
 * The small doge series is extremely lightweight, with the smallest version being about **$\frac{1}{7800}$** the size of GPT3, and strives to make even the most ordinary personal GPU capable of fast inference and even training.🏎️
 * We provide full-stage code for dataset preprocessing, pre-training, supervised fine-tuning, reinforcement learning preference alignment, visual multimodal VLM (under development), and inference fine-tuning R1 (under development).🧪
@@ -25,13 +27,10 @@ English | [简体中文](./README_zh.md)
   > [!TIP]
   > We hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use.🤗
 
-<div align="center">
-    <img src="./assets/reasoning.gif" alt="streamlit"/>
-    <figcaption>Doge-60M-Instruct on an 11th gen i7 CPU notebook for fast inference</figcaption>
 
----
+<img src="./assets/reasoning.gif" alt="streamlit"/>
+<figcaption>Doge-60M-Instruct on an 11th gen i7 CPU notebook for fast inference</figcaption>
 
-# small-doge
 
 ## About
 
