@@ -90,7 +90,7 @@ def main(args):
 
 
     # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path)
 
     # Process fineweb-edu
     dataset = load_from_disk(args.datasets_dir + '/fineweb-edu')
