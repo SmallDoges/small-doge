@@ -40,6 +40,8 @@ if stale_egg_info.exists():
 # IMPORTANT: all dependencies should be listed here with their version requirements, if any.
 #   * If a dependency is fast-moving (e.g. transformers), pin to the exact version
 _deps = [
+    "latex2sympy2_extended>=0.9.3",
+    "math_verify>=0.3.3",
     "accelerate>=1.2.1",
     "bitsandbytes>=0.43.0",
     "ruff>=0.9.0",
@@ -86,6 +88,8 @@ extras["deepspeed"] = deps_list("deepspeed")
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
+    deps["latex2sympy2_extended"],
+    deps["math_verify"],
     deps["accelerate"],
     deps["bitsandbytes"],
     deps["einops"],
