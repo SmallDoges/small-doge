@@ -175,7 +175,7 @@ bash ./evaluation/eval_downstream_tasks.sh
 
 ### 下载数据集
 
-微调数据集, 我们选取了 `smoltalk` 数据集, 来进行监督微调, `ultrafeedback_binarized` 数据集, 来进行近端策略优化.
+微调数据集, 我们选取了 `smoltalk` 数据集, 来进行监督微调, `ultrafeedback_binarized` 数据集, 来进行偏好优化.
 
 ```shell
 # 填写保存路径, 缓存路径和进程数
@@ -218,7 +218,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_fil
 > [!NOTE]
 > 上面的训练命令是为 1 x RTX 4090 (24GB) 节点配置的. 对于不同的硬件和拓扑, 您可能需要调整批量大小和梯度累积步数.
 
-### 近端策略优化模型
+### 偏好优化模型
 
 然后我们对监督微调后的模型进行强化学习, 来与人类偏好对齐, 这里使用的是 `DPO` 算法.
 
