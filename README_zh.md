@@ -13,7 +13,11 @@
 
 *Small Doges 正在建设中, 让我们一起开发吧!🐕🐕🐕*
 
+<h4>
+
 [English](./README.md) | 简体中文
+
+</h4>
 
 </div>
 
