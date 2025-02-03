@@ -256,7 +256,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/dpo.py --config_fil
 > [!NOTE]
 > The training command above is configured for a 1 x RTX 4090 (24GB) node. For different hardware and topologies, you may need to adjust the batch size and gradient accumulation steps.
 
-## 3.6 Usage
+### 3.6 Usage
 
 After fine-tuning is complete, we can use `AutoModelForCausalLM` of `Transformers` to load the model, and use `AutoTokenizer` to load `LlamaTokenizer`, and use `GenerationConfig` and `TextStreamer` to support streaming generation with sampling.
 
