@@ -168,12 +168,19 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 - 硬件: 1x NVIDIA RTX 4090
 - 软件: Transformers, TRL
 
-# 期许
+
+## 期许
 > [!IMPORTANT]
 > - 如果您觉得 small-doge 对你有所帮助, 请给它一颗星星⭐吧! <br><br>
 > - 由于时间和专业知识的限制, 项目中可能会有疏漏.
 > 欢迎在Issue提出你的见解或通过提交PR来帮助项目不断完善, 您的支持是推动项目持续进步的动力源泉!😊 <br><br>
 > - 一个人可以走的很快, 一群人才可以走的更远. 如果您已经尝试训练了新的 small-doge 型号，欢迎在 Discussions 或 Issues 中分享您的模型权重、训练配方、评估结果和其他相关信息. 可以是在特定下游任务或垂直领域, 例如情感识别、医疗、心理、金融、法律问答等的small-doge新模型版本. 也可以是拓展训练, 例如探索更长文本序列、更大参数或更大的数据集的small-doge新模型版本. 您的分享将会大力促进社区的发展!🚀🚀🚀
+
+
+## 星星历史
+
+[![Star History Chart](https://api.star-history.com/svg?repos=SmallDoges/small-doge&type=Date)](https://star-history.com/#SmallDoges/small-doge&Date)
+
 
 ## 引用
 
