@@ -171,7 +171,7 @@ Here are the initial learning rates required to continue training at each checkp
 
 # Expectations
 > [!IMPORTANT]
-> - If you find small-doge helpful, please give it a star⭐! <br><br>
+> - If you find this project helpful, please consider giving it a star ⭐! <br><br>
 > - Due to time and expertise constraints, there may be omissions in the project.
 > Feel free to submit your insights through Issues or PRs to help improve the project, your support is the driving force behind the continuous progress of the project!😊 <br><br>
 > - One person can go fast, but a group of people can go further. If you have already trained a new small-doge model, feel free to share your model weights, training recipes, evaluation results, and other relevant information in Discussions or Issues. It can be a new small-doge model version for specific downstream tasks or vertical fields, such as sentiment recognition, medical, psychological, financial, legal Q&A, etc. It can also be an expanded training, such as exploring new small-doge model versions with longer text sequences, larger parameters, or larger datasets. Your sharing will greatly promote the development of the community!🚀🚀🚀
