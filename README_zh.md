@@ -13,7 +13,7 @@
 
 *Small Doges 正在建设中, 让我们一起开发吧!🐕🐕🐕*
 
-[English](./README.md) | 简体中文
+简体中文 | [English](./README.md)
 
 </div>
 
@@ -166,6 +166,18 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 - 硬件: 1x NVIDIA RTX 4090
 - 软件: Transformers, TRL
 
+# 期许
+> [!TIP]
+> 如果您觉得 `small-doge`对您有所帮助，可以点一点⭐<br/>
+> 时间水平有限难免纰漏，欢迎在Issues交流指正或提交PR改进项目<br/>
+> 您的支持就是持续改进项目的动力
+
+> [!NOTE]
+> 一个人可以走的很快,一群人才可以走的更远
+> 如果您已经尝试训练了新的small-doge型号，欢迎在Discussions或Issues中分享您的模型权重<br/>
+> 可以是在特定下游任务或垂直领域（例如情感识别、医疗、心理、金融、法律问答等）的small-doge新模型版本<br/>
+> 也可以是拓展训练后（例如探索更长文本序列、更大体积（0.1B+）或更大的数据集）的small-doge新模型版本<br/>
+> 您的分享将会大力促进社区的发展.
 
 ## 引用
 

@@ -164,6 +164,19 @@ Here are the initial learning rates required to continue training at each checkp
 - Hardware: 1x NVIDIA RTX 4090
 - Software: Transformers, TRL
 
+# Expectations
+> [!TIP]
+> If you find `small-doge` helpful, please give it a star⭐<br/>
+> Due to limited time and expertise, there may be mistakes. Feel free to discuss and correct them in Issues or submit PRs to improve the project<br/>
+> Your support is the driving force for continuous improvement of the project
+
+> [!NOTE]
+> One person can go fast, but a group can go further
+> If you have trained a new small-doge model, please share your model weights in Discussions or Issues<br/>
+> It can be a new small-doge model version for specific downstream tasks or vertical fields (such as sentiment recognition, medical, psychological, financial, legal Q&A, etc.)<br/>
+> It can also be a new small-doge model version after extended training (such as exploring longer text sequences, larger volumes (0.1B+), or larger datasets)<br/>
+> Your sharing will greatly promote the development of the community.
+
 
 # Citation
 
