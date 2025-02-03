@@ -13,26 +13,22 @@
 # limitations under the License.
 
 import logging
-import sys
 import os
-from argparse import ArgumentParser
+import sys
 
-import yaml
 import datasets
-import transformers
 import torch
-
+import transformers
 from datasets import load_dataset
-from transformers import set_seed, AutoTokenizer, AutoConfig, AutoModel, AutoModelForCausalLM
+from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-from small_doge.models import DogeConfig
-from small_doge.models import DogeModel, DogeForCausalLM
+from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
 from trl import (
-    ModelConfig,
-    ScriptArguments,
     DPOConfig,
     DPOTrainer,
+    ModelConfig,
+    ScriptArguments,
     TrlParser,
     get_kbit_device_map,
     get_peft_config,
@@ -82,7 +78,7 @@ def main(script_args, training_args, model_args):
     # Load datasets
     ################
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
-    
+
     ################
     # Load tokenizer
     ################
@@ -164,7 +160,7 @@ def main(script_args, training_args, model_args):
         # Restore k,v cache for fast inference
         trainer.model.config.use_cache = True
         trainer.model.config.save_pretrained(training_args.output_dir)
-    
+
     logger.info("*** Training complete ***")
 
     ##########
@@ -173,11 +169,11 @@ def main(script_args, training_args, model_args):
     if training_args.do_eval:
         logger.info("*** Start evaluation... ***")
         metrics = trainer.evaluate()
-        metrics['eval_samples'] = len(dataset[script_args.dataset_test_split])
+        metrics["eval_samples"] = len(dataset[script_args.dataset_test_split])
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
         logger.info("*** Evaluation complete ***")
-    
+
     ################################
     # Register the model and save
     ################################
@@ -187,15 +183,15 @@ def main(script_args, training_args, model_args):
     DogeConfig.register_for_auto_class()
     DogeModel.register_for_auto_class("AutoModel")
     DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
-    tokenizer = AutoTokenizer.from_pretrained(f'{training_args.output_dir}')
-    tokenizer.save_pretrained(f'{training_args.output_dir}')
-    model = AutoModelForCausalLM.from_pretrained(f'{training_args.output_dir}')
-    model.save_pretrained(f'{training_args.output_dir}')
+    tokenizer = AutoTokenizer.from_pretrained(f"{training_args.output_dir}")
+    tokenizer.save_pretrained(f"{training_args.output_dir}")
+    model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")
+    model.save_pretrained(f"{training_args.output_dir}")
 
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
         trainer.push_to_hub(**kwargs)
-    
+
     logger.info("*** Training finished! ***")
 
 
