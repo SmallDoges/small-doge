@@ -34,11 +34,6 @@ English | [简体中文](https://github.com/SamllDoge/small-doge/blob/main/recip
     - [Concatenate the dataset](#43-concatenate-the-dataset)
     - [Distillation Fine-tuning the model](#44-distillation-fine-tuning-the-model)
     - [Group Relative Optimization the model](#45-group-relative-optimization-the-model)
-    - [Usage](#46-usage)
-
-
-## 1. Installation
-
 Please follow the instructions in [README](https://github.com/SmallDoges/small-doge/blob/main/README.md) to install the necessary dependencies.
 
 
@@ -56,7 +51,7 @@ python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_di
 ```
 
 > [!NOTE]
-> Due to the large size of the dataset, at least 2TB of storage space is required. If you do not have enough storage space, you can choose to download part of the dataset by yourself [here](./utils/download_pt_datasets.py).
+> Due to the large size of the dataset, at least 2TB of storage space is required. If you do not have enough storage space, you can choose to download part of the dataset by yourself [here](../../examples/utils/download_pt_datasets.py).
 > You can freely change the downloaded dataset. We provide this example just to reproduce the current open-source model.
 
 ### 2.2 Preprocess the dataset
