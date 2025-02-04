@@ -56,7 +56,7 @@ python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_di
 ```
 
 > [!NOTE]
-> 由于数据集过大, 至少需要 2TB 的存储空间. 如果您的存储空间不足, 可以自行在[这里](./utils/download_pt_datasets.py)选择部分数据集进行下载. 
+> 由于数据集过大, 至少需要 2TB 的存储空间. 如果您的存储空间不足, 可以自行在[这里](../../examples/utils/download_pt_datasets.py)选择部分数据集进行下载. 
 > 您可以自由更改下载的数据集, 我们提供这个示例仅仅是为了复现目前的开源模型.
 
 ### 2.2 预处理数据集
@@ -84,7 +84,7 @@ conversation = [
 ]
 ```
 
-在这里我们推荐使用 [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) 来处理数据集, 它是由 `Llama-3.3` 的分词器针对 `smollm-corpus` 训练得到的, 词表大小为 `32768` , 训练脚本可以在 [这里](https://github.com/SamllDoge/small-doge/blob/main/examples/utils/train_tokenizer_from_old.py) 找到.
+在这里我们推荐使用 [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) 来处理数据集, 它是由 `Llama-3.3` 的分词器针对 `smollm-corpus` 训练得到的, 词表大小为 `32768` , 训练脚本可以在 [这里](../../examples/utils/train_tokenizer_from_old.py) 找到.
 
 ```shell
 # 填写数据集路径, 保存路径, 分词器路径, 样本数量, 最大长度和进程数
