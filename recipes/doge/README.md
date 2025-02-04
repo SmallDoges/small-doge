@@ -56,7 +56,7 @@ python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_di
 ```
 
 > [!NOTE]
-> Due to the large size of the dataset, at least 2TB of storage space is required. If you do not have enough storage space, you can choose to download part of the dataset by yourself [here](./utils/download_pt_datasets.py).
+> Due to the large size of the dataset, at least 2TB of storage space is required. If you do not have enough storage space, you can choose to download part of the dataset by yourself [here](../../examples/utils/download_pt_datasets.py).
 > You can freely change the downloaded dataset. We provide this example just to reproduce the current open-source model.
 
 ### 2.2 Preprocess the dataset
@@ -84,7 +84,7 @@ conversation = [
 ]
 ```
 
-Here we recommend using [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) to process the dataset. It is trained by the `Llama-3.3` tokenizer on the `smollm-corpus`, with a vocabulary size of `32768`. The training script can be found [here](ttps://github.com/SamllDoge/small-doge/blob/main/examples/utils/train_tokenizer_from_old.py).
+Here we recommend using [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) to process the dataset. It is trained by the `Llama-3.3` tokenizer on the `smollm-corpus`, with a vocabulary size of `32768`. The training script can be found [here](../../examples/utils/train_tokenizer_from_old.py).
 
 ```shell
 # Fill in the dataset path, save path, tokenizer path, sample number, maximum length, and number of processes
