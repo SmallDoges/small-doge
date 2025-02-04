@@ -34,6 +34,11 @@ English | [简体中文](https://github.com/SamllDoge/small-doge/blob/main/recip
     - [Concatenate the dataset](#43-concatenate-the-dataset)
     - [Distillation Fine-tuning the model](#44-distillation-fine-tuning-the-model)
     - [Group Relative Optimization the model](#45-group-relative-optimization-the-model)
+    - [Usage](#46-usage)
+
+
+## 1. Installation
+
 Please follow the instructions in [README](https://github.com/SmallDoges/small-doge/blob/main/README.md) to install the necessary dependencies.
 
 
@@ -79,7 +84,7 @@ conversation = [
 ]
 ```
 
-Here we recommend using [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) to process the dataset. It is trained by the `Llama-3.3` tokenizer on the `smollm-corpus`, with a vocabulary size of `32768`. The training script can be found [here](ttps://github.com/SamllDoge/small-doge/blob/main/examples/utils/train_tokenizer_from_old.py).
+Here we recommend using [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) to process the dataset. It is trained by the `Llama-3.3` tokenizer on the `smollm-corpus`, with a vocabulary size of `32768`. The training script can be found [here](../../examples/utils/train_tokenizer_from_old.py).
 
 ```shell
 # Fill in the dataset path, save path, tokenizer path, sample number, maximum length, and number of processes
