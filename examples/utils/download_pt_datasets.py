@@ -96,30 +96,37 @@ def download_fine_math(save_dir, cache_dir, num_proc):
 
 
 def main(args):
-    processes = []
-    download_funcs = [
-        download_fineweb_edu(args.save_dir, args.cache_dir, args.num_proc),
-        download_cosmopedia_v2(args.save_dir, args.cache_dir, args.num_proc),
-        download_python_edu(args.save_dir, args.cache_dir, args.num_proc),
-        download_fine_math(args.save_dir, args.cache_dir, args.num_proc),
-    ]
-    for func in download_funcs:
-        p = multiprocessing.Process(
-            target=func, args=(args.save_dir, args.cache_dir, args.num_proc)
-        )
-        processes.append(p)
-        p.start()
-    for p in processes:
-        p.join()
+    if args.is_parallel is True:
+        processes = []
+        download_funcs = [
+            download_fineweb_edu(args.save_dir, args.cache_dir, args.num_proc),
+            download_cosmopedia_v2(args.save_dir, args.cache_dir, args.num_proc),
+            download_python_edu(args.save_dir, args.cache_dir, args.num_proc),
+            download_fine_math(args.save_dir, args.cache_dir, args.num_proc),
+        ]
+        for func in download_funcs:
+            p = multiprocessing.Process(
+                target=func, args=(args.save_dir, args.cache_dir, args.num_proc)
+            )
+            processes.append(p)
+            p.start()
+        for p in processes:
+            p.join()
+    else:
+        download_fineweb_edu(args.save_dir, args.cache_dir, args.num_proc)
+        download_cosmopedia_v2(args.save_dir, args.cache_dir, args.num_proc)
+        download_python_edu(args.save_dir, args.cache_dir, args.num_proc)
+        download_fine_math(args.save_dir, args.cache_dir, args.num_proc)
 
 
 if __name__ == "__main__":
     # Windows multiprocessing configuration compatibility
     multiprocessing.freeze_support()
     parser = ArgumentParser()
-    parser.add_argument("--save_dir", type=str, default=".\datasets")
-    parser.add_argument("--cache_dir", type=str, default=".\cache")
+    parser.add_argument("--save_dir", type=str, default="./datasets")
+    parser.add_argument("--cache_dir", type=str, default="./cache")
     parser.add_argument("--num_proc", type=int, default=1)
+    parser.add_argument("--is_parallel", type=bool, default=False, help="Whether to download all datasets in parallel.")
     args = parser.parse_args()
     print(args)
     main(args)
