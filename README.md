@@ -13,25 +13,30 @@
 
 *Small Doges is under construction, let's develop together!🐕🐕🐕*
 
+<h4>
+
 English | [简体中文](./README_zh.md)
 
+</h4>
+
 </div>
+
+# small-doge
+
+**News**: 🎉🎉🎉 We now support the full training process of **pre-trained Doge-Base**, **instruction fine-tuned Doge-Instruct**, and **reasoning fine-tuned Doge-R1**, please refer to the [guide](./recipes/doge/README.md)!
 
 * This project aims to train a series of dynamic and fast small models from scratch, with the fastest training time of only 3 hours! You can train a tiny language model [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) in just 13M!🚀
 * The small doge series is extremely lightweight, with the smallest version being about **$\frac{1}{7800}$** the size of GPT3, and strives to make even the most ordinary personal GPU capable of fast inference and even training.🏎️
 * We provide full-stage code for dataset preprocessing, pre-training, supervised fine-tuning, reinforcement learning preference alignment, visual multimodal VLM (under development), and inference fine-tuning R1 (under development).🧪
 * Standing on the shoulders of giants can see further, we hope that the small doge series of small models can provide researchers with more ideas and contribute to the road to achieving **Embodied Artificial General Intelligence**.🤖
 
-  > [!TIP]
-  > We hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use.🤗
+> [!TIP]
+> We hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use.🤗
 
-<div align="center">
-    <img src="./assets/reasoning.gif" alt="streamlit"/>
-    <figcaption>Doge-60M-Instruct on an 11th gen i7 CPU notebook for fast inference</figcaption>
 
----
+<img src="./assets/reasoning.gif" alt="streamlit"/>
+<figcaption>Doge-60M-Instruct on an 11th gen i7 CPU notebook for fast inference</figcaption>
 
-# small-doge
 
 ## About
 
@@ -164,21 +169,21 @@ Here are the initial learning rates required to continue training at each checkp
 - Hardware: 1x NVIDIA RTX 4090
 - Software: Transformers, TRL
 
-# Expectations
-> [!TIP]
-> If you find `small-doge` helpful, please give it a star⭐<br/>
-> Due to limited time and expertise, there may be mistakes. Feel free to discuss and correct them in Issues or submit PRs to improve the project<br/>
-> Your support is the driving force for continuous improvement of the project
 
-> [!NOTE]
-> One person can go fast, but a group can go further
-> If you have trained a new small-doge model, please share your model weights in Discussions or Issues<br/>
-> It can be a new small-doge model version for specific downstream tasks or vertical fields (such as sentiment recognition, medical, psychological, financial, legal Q&A, etc.)<br/>
-> It can also be a new small-doge model version after extended training (such as exploring longer text sequences, larger volumes (0.1B+), or larger datasets)<br/>
-> Your sharing will greatly promote the development of the community.
+## Expectations
+> [!IMPORTANT]
+> - If you find this project helpful, please consider giving it a star ⭐! <br><br>
+> - Due to time and expertise constraints, there may be omissions in the project.
+> Feel free to submit your insights through Issues or PRs to help improve the project, your support is the driving force behind the continuous progress of the project!😊 <br><br>
+> - One person can go fast, but a group of people can go further. If you have already trained a new small-doge model, feel free to share your model weights, training recipes, evaluation results, and other relevant information in Discussions or Issues. It can be a new small-doge model version for specific downstream tasks or vertical fields, such as sentiment recognition, medical, psychological, financial, legal Q&A, etc. It can also be an expanded training, such as exploring new small-doge model versions with longer text sequences, larger parameters, or larger datasets. Your sharing will greatly promote the development of the community!🚀🚀🚀
 
 
-# Citation
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=SmallDoges/small-doge&type=Date)](https://star-history.com/#SmallDoges/small-doge&Date)
+
+
+## Citation
 
 If you use this codebase, or otherwise find our work valuable, please cite our paper:
 

@@ -1,4 +1,4 @@
-# Copyright 2025 The SamllDoge Team. All rights reserved.
+# Copyright 2025 The SmallDoge Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,34 +14,102 @@
 
 import logging
 import os
+import re
 import sys
-from argparse import ArgumentParser
+from dataclasses import dataclass, field
 
 import datasets
-import torch
 import transformers
 from datasets import load_dataset
-from transformers import (
-    AutoConfig,
-    AutoModel,
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    DataCollatorForLanguageModeling,
-    Trainer,
-    TrainingArguments,
-    set_seed,
-)
+from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-import yaml
+from latex2sympy2_extended import NormalizationConfig
+from math_verify import LatexExtractionConfig, parse, verify
 from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
-from trl import ModelConfig, ScriptArguments, TrlParser
+from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
 
 
 logger = logging.getLogger(__name__)
 
 
-def main(script_args, training_args, model_args, model_config):
+@dataclass
+class GRPOScriptArguments(ScriptArguments):
+    """
+    Script arguments for the GRPO training script.
+
+    Args:
+        reward_funcs (`list[str]`):
+            List of reward functions. Possible values: 'accuracy', 'format'.
+    """
+
+    reward_funcs: list[str] = field(
+        default_factory=lambda: ["accuracy", "format"],
+        metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
+    )
+
+
+def accuracy_reward(completions, solution, **kwargs):
+    """Reward function that checks if the completion is the same as the ground truth."""
+    contents = [completion[0]["content"] for completion in completions]
+    rewards = []
+    for content, sol in zip(contents, solution):
+        gold_parsed = parse(sol, extraction_mode="first_match", extraction_config=[LatexExtractionConfig()])
+        if len(gold_parsed) != 0:
+            # We require the answer to be provided in correct latex (no malformed operators)
+            answer_parsed = parse(
+                content,
+                extraction_config=[
+                    LatexExtractionConfig(
+                        normalization_config=NormalizationConfig(
+                            nits=False,
+                            malformed_operators=False,
+                            basic_latex=True,
+                            equations=True,
+                            boxed=True,
+                            units=True,
+                        ),
+                        # Ensures that boxed is tried first
+                        boxed_match_priority=0,
+                        try_extract_without_anchor=False,
+                    )
+                ],
+                extraction_mode="first_match",
+            )
+            # Reward 1 if the content is the same as the ground truth, 0 otherwise
+            reward = float(verify(answer_parsed, gold_parsed))
+        else:
+            # If the gold solution is not parseable, we reward 1 to skip this example
+            reward = 1.0
+            print("Failed to parse gold solution: ", sol)
+        rewards.append(reward)
+
+    return rewards
+
+
+def format_reward(completions, **kwargs):
+    """Reward function that checks if the completion has a specific format."""
+    pattern = r"^<think>.*?</think><answer>.*?</answer>$"
+    completion_contents = [completion[0]["content"] for completion in completions]
+    matches = [re.match(pattern, content) for content in completion_contents]
+    return [1.0 if match else 0.0 for match in matches]
+
+
+reward_funcs_registry = {
+    "accuracy": accuracy_reward,
+    "format": format_reward,
+}
+
+
+SYSTEM_PROMPT = (
+    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant "
+    "first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning "
+    "process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., "
+    "<think> reasoning process here </think><answer> answer here </answer>"
+)
+
+
+def main(script_args, training_args, model_args):
     # Set seed for reproducibility
     set_seed(training_args.seed)
 
@@ -81,55 +149,19 @@ def main(script_args, training_args, model_args, model_config):
     ###############
     dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
 
-    ################
-    # Load tokenizer
-    ################
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code, use_fast=True
-    )
-    tokenizer.pad_token = tokenizer.eos_token
+    # Get reward functions
+    reward_funcs = [reward_funcs_registry[func] for func in script_args.reward_funcs]
 
-    ###################
-    # Model init kwargs
-    ###################
-    logger.info("*** Initializing model kwargs ***")
-    torch_dtype = (
-        model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
-    )
-    model_kwargs = dict(
-        revision=model_args.model_revision,
-        trust_remote_code=model_args.trust_remote_code,
-        attn_implementation=model_args.attn_implementation,
-        torch_dtype=torch_dtype,
-        use_cache=False if training_args.gradient_checkpointing else True,
-    )
-    training_args.model_init_kwargs = model_kwargs
-
-    ################################
-    # Initialize model
-    ################################
-    logger.info("Initializing model")
-    config = DogeConfig(**model_config)
-    model = DogeForCausalLM(config=config)
-
-    model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    logger.info(f"Model structure: {model}")
-    logger.info(f"Model parameters: {model_num_params}")
-
-    ################################
-    # Initialize the PT trainer
-    ################################
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False,
-    )
-    trainer = Trainer(
-        model=model,
+    #############################
+    # Initialize the GRPO trainer
+    #############################
+    trainer = GRPOTrainer(
+        model=model_args.model_name_or_path,
+        reward_funcs=reward_funcs,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
-        processing_class=tokenizer,
-        data_collator=data_collator,
+        peft_config=get_peft_config(model_args),
     )
 
     ###############
@@ -157,6 +189,7 @@ def main(script_args, training_args, model_args, model_config):
 
     # Save everything else on main process
     kwargs = {
+        "finetuned_from": model_args.model_name_or_path,
         "dataset": list(script_args.dataset_name),
         "dataset_tags": list(script_args.dataset_name),
         "tags": ["small-doge"],
@@ -194,6 +227,9 @@ def main(script_args, training_args, model_args, model_config):
     model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")
     model.save_pretrained(f"{training_args.output_dir}")
 
+    #############
+    # push to hub
+    #############
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
         trainer.push_to_hub(**kwargs)
@@ -202,14 +238,6 @@ def main(script_args, training_args, model_args, model_config):
 
 
 if __name__ == "__main__":
-    model_config_parser = ArgumentParser()
-    model_config_parser.add_argument(
-        "--config", type=str, default="./recipes/doge/Doge-20M/config_full.yaml", help="path to yaml config file of PT"
-    )
-
-    parser = TrlParser((ScriptArguments, TrainingArguments, ModelConfig))
+    parser = TrlParser((GRPOScriptArguments, GRPOConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
-    model_config = yaml.load(
-        open(model_config_parser.parse_args().config, "r", encoding="utf-8"), Loader=yaml.FullLoader
-    )["model_config"]
-    main(script_args, training_args, model_args, model_config)
+    main(script_args, training_args, model_args)

@@ -13,26 +13,28 @@
 
 *Small Doges 正在建设中, 让我们一起开发吧!🐕🐕🐕*
 
+<h4>
+
 简体中文 | [English](./README.md)
 
+</h4>
+
 </div>
+
+# small-doge
+
+**新闻**: 🎉🎉🎉 我们现在已经支持 **预训练的Doge-Base**, **指令微调的Doge-Instruct**, 以及**推理微调的Doge-R1**的全部训练流程, 请参阅[指南](./recipes/doge/README_zh.md)!
 
 * 本项目旨在从**0**开始, 最快仅用3小时！即可训练出仅为13M大小的微型语言模型[Doge-20M](https://huggingface.co/SmallDoge/Doge-20M)!🚀
 * small doge系列极其轻量, 最小版本体积约是 GPT3 的 **$\frac{1}{7800}$**, 力求做到最普通的个人GPU也可快速推理甚至训练.🏎️
 * 我们提供了数据集预处理、预训练、监督微调、强化学习偏好对齐的全阶段代码、视觉多模态VLM(正在开发)和推理微调R1(正在开发).🧪
 * 站在巨人的肩膀上可以看的更远, 希望small doge系列小模型能为研究者提供更多思路, 为实现**具身通用人工智能**的道路添砖加瓦.🤖
 
-  > [!TIP]
-  > 我们希望尽可能使用开源工具和框架来简化从数据处理到模型训练的过程, 以便初学者可以轻松理解和使用.🤗
+> [!TIP]
+> 我们希望尽可能使用开源工具和框架来简化从数据处理到模型训练的过程, 以便初学者可以轻松理解和使用.🤗
 
-<div align="center">
-    <img src="./assets/reasoning.gif" alt="streamlit"/>
-    <figcaption>Doge-60M-Instruct 在 11 代 i7 CPU 笔记本上快速推理</figcaption>
-</div>
-
----
-
-# small-doge
+<img src="./assets/reasoning.gif" alt="streamlit"/>
+<figcaption>Doge-60M-Instruct 在 11 代 i7 CPU 笔记本上快速推理</figcaption>
 
 
 ## 关于
@@ -154,7 +156,7 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 | [Doge-20M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-20M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 8e-4 | 0.25M | bfloat16 |
 | [Doge-60M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-60M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 6e-4 | 0.25M | bfloat16 |
 
-**近端优化微调**:
+**直接优化微调**:
 | 模型 | 训练数据 | 轮次 | 上下文长度 | 学习率 | 批量大小 | 精度 |
 |---|---|---|---|---|---|---|
 | [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
@@ -166,18 +168,19 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 - 硬件: 1x NVIDIA RTX 4090
 - 软件: Transformers, TRL
 
-# 期许
-> [!TIP]
-> 如果您觉得 `small-doge`对您有所帮助，可以点一点⭐<br/>
-> 时间水平有限难免纰漏，欢迎在Issues交流指正或提交PR改进项目<br/>
-> 您的支持就是持续改进项目的动力
 
-> [!NOTE]
-> 一个人可以走的很快,一群人才可以走的更远
-> 如果您已经尝试训练了新的small-doge型号，欢迎在Discussions或Issues中分享您的模型权重<br/>
-> 可以是在特定下游任务或垂直领域（例如情感识别、医疗、心理、金融、法律问答等）的small-doge新模型版本<br/>
-> 也可以是拓展训练后（例如探索更长文本序列、更大体积（0.1B+）或更大的数据集）的small-doge新模型版本<br/>
-> 您的分享将会大力促进社区的发展.
+## 期许
+> [!IMPORTANT]
+> - 如果您觉得 small-doge 对你有所帮助, 请给它一颗星星⭐吧! <br><br>
+> - 由于时间和专业知识的限制, 项目中可能会有疏漏.
+> 欢迎在Issue提出你的见解或通过提交PR来帮助项目不断完善, 您的支持是推动项目持续进步的动力源泉!😊 <br><br>
+> - 一个人可以走的很快, 一群人才可以走的更远. 如果您已经尝试训练了新的 small-doge 型号，欢迎在 Discussions 或 Issues 中分享您的模型权重、训练配方、评估结果和其他相关信息. 可以是在特定下游任务或垂直领域, 例如情感识别、医疗、心理、金融、法律问答等的small-doge新模型版本. 也可以是拓展训练, 例如探索更长文本序列、更大参数或更大的数据集的small-doge新模型版本. 您的分享将会大力促进社区的发展!🚀🚀🚀
+
+
+## 星星历史
+
+[![Star History Chart](https://api.star-history.com/svg?repos=SmallDoges/small-doge&type=Date)](https://star-history.com/#SmallDoges/small-doge&Date)
+
 
 ## 引用
 
