@@ -51,8 +51,8 @@ We provide a Doge checkpoint that can be further pre-trained on a new dataset. I
 For the pre-training dataset, we selected the `fineweb-edu-dedup` high-quality text, `cosmopedia-v2` synthetic instruction dataset, and supplemented `python-edu` and `fine-math` to ensure the model's code and math capabilities.
 
 ```shell
-# Fill in the save path, cache path, and number of processes
-python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
+# Fill in the save path, cache path, and number of processes. (Optional, if you want to accelerate datasets installed speed change parallel option to True)
+python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_dir ./cache --num_proc 1 --is_parallel False
 ```
 
 > [!NOTE]
