@@ -176,3 +176,8 @@ wandb/
 logs/
 eval_results/
 results/
+
+# HDD datasets folders
+cache/hub
+cache/HuggingFaceTB___smollm-corpus
+cache/modules
