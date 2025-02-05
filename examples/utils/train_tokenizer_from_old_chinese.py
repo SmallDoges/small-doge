@@ -20,17 +20,24 @@ from datasets import load_from_disk, concatenate_datasets
 from argparse import ArgumentParser
 from datasets import load_dataset, Dataset
 
+# make jsonl dataset to dataset
+def load_translation_dataset(dataset_path, num_proc, cache_dir):
+    dataset = load_dataset('json', data_files=dataset_path, split='train', num_proc=num_proc, cache_dir=cache_dir)
+    dataset.save_to_disk('./dataset', num_proc=num_proc)
+    dataset = dataset["train"].select(range(1_000_000))
+    dataset.save_to_disk('./dataset_sample', num_proc=num_proc)
+    return dataset
+
 def main(args):
 
     dataset = load_from_disk(args.datasets_dir)
     dataset = dataset.select(range(args.num_examples))
-   
 
     def get_training_corpus():
         for i in range(0, len(dataset), 1):
             samples = dataset[i : i + 1]["text"]
             yield samples
-
+    
     # Load tokenizer
     old_tokenizer = AutoTokenizer.from_pretrained(args.old_tokenizer_path)
 
@@ -43,14 +50,8 @@ def main(args):
 
 
 if __name__ == '__main__':
-    dataset = load_dataset('./dataset', num_proc=8, cache_dir="./cache")
-    dataset.save_to_disk('./dataset_new', num_proc=8)
 
-    dataset = load_dataset('./dataset_new', num_proc=8, cache_dir="./cache")
-    dataset = dataset["train"].select(range(1_000_000))
-    dataset.save_to_disk('./dataset_sample', num_proc=8)
-    datasets = Dataset.load_from_disk('./dataset_sample')
-
+    datasets = load_translation_dataset('./dataset/mobvoi_seq_monkey_general_open_corpus.jsonl', 8, './dataset')
     argparser = ArgumentParser()
     argparser.add_argument("--datasets_dir", type=str, default="./dataset_sample")
     argparser.add_argument("--old_tokenizer_path", type=str, default="SmallDoge/Doge-tokenizer")
@@ -61,7 +62,7 @@ if __name__ == '__main__':
 
     main(args)
 
-    # test
+    # test function: load tokenizer and encode and decode text to prove the tokenizer is trained successfully
     tokenizer = AutoTokenizer.from_pretrained("./examples/tokenizer_new")
     inputs = "你好666"
     tokens = tokenizer.tokenize(inputs)
