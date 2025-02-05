@@ -100,8 +100,8 @@ def main(args):
     download_funcs = [
         download_fineweb_edu(args.save_dir, args.cache_dir, args.num_proc),
         download_cosmopedia_v2(args.save_dir, args.cache_dir, args.num_proc),
-        # download_python_edu(args.save_dir, args.cache_dir, args.num_proc),
-        # download_fine_math(args.save_dir, args.cache_dir, args.num_proc),
+        download_python_edu(args.save_dir, args.cache_dir, args.num_proc),
+        download_fine_math(args.save_dir, args.cache_dir, args.num_proc),
     ]
     for func in download_funcs:
         p = multiprocessing.Process(
