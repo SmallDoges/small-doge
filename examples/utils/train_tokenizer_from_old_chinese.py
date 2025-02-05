@@ -68,4 +68,4 @@ if __name__ == '__main__':
     tokens = tokenizer.tokenize(inputs)
     encode = tokenizer.encode(inputs)
     decode = tokenizer.decode(encode)
-    print(f"tokens: {tokens}, encode: {encode}, deocde: {decode}")
+    print(f"tokens: {tokens}, encode: {encode}, deocde: {decode}") 
