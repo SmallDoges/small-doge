@@ -21,7 +21,7 @@ from argparse import ArgumentParser
 from datasets import load_dataset, Dataset
 
 # make jsonl dataset to dataset
-def load_translation_dataset(dataset_path, num_proc, cache_dir):
+def load_translation_dataset(dataset_path, num_proc, cache_dir="./cache")
     dataset = load_dataset('json', data_files=dataset_path, split='train', num_proc=num_proc, cache_dir=cache_dir)
     dataset.save_to_disk('./dataset', num_proc=num_proc)
     dataset = dataset["train"].select(range(1_000_000))
@@ -30,7 +30,7 @@ def load_translation_dataset(dataset_path, num_proc, cache_dir):
 
 def main(args):
 
-    dataset = load_from_disk(args.datasets_dir)
+    dataset = load_translation_dataset('./dataset/mobvoi_seq_monkey_general_open_corpus.jsonl', args.num_proc)
     dataset = dataset.select(range(args.num_examples))
 
     def get_training_corpus():
@@ -50,8 +50,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-
-    datasets = load_translation_dataset('./dataset/mobvoi_seq_monkey_general_open_corpus.jsonl', 8, './dataset')
     argparser = ArgumentParser()
     argparser.add_argument("--datasets_dir", type=str, default="./dataset_sample")
     argparser.add_argument("--old_tokenizer_path", type=str, default="SmallDoge/Doge-tokenizer")
