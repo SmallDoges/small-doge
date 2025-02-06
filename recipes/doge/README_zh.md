@@ -3,7 +3,7 @@
 <div align="center">
 <h4>
 
-[English](https://github.com/SamllDoge/small-doge/blob/main/recipes/doge/README.md) | 简体中文
+[English](https://github.com/SmallDoges/small-doge/blob/main/recipes/doge/README.md) | 简体中文
 
 </h4>
 </div>
@@ -88,7 +88,7 @@ conversation = [
 
 ```shell
 # 填写数据集路径, 保存路径, 分词器路径, 样本数量, 最大长度和进程数
-python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SamllDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
+python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SmallDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
 ```
 
 > [!NOTE]
