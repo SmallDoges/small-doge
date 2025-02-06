@@ -176,3 +176,7 @@ wandb/
 logs/
 eval_results/
 results/
+
+# HDD Disk folders (If the user is using HDD disk to manage the code and datasets, we must to ignore the downloaded datasets on the local hdd disk)
+datasets
+cache
