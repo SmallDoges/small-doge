@@ -52,7 +52,7 @@ For the pre-training dataset, we selected the `fineweb-edu-dedup` high-quality t
 
 ```shell
 # Fill in the save path, cache path, and number of processes.
-python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_dir /cache --num_proc 1
+python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
 ```
 
 > [!NOTE]
