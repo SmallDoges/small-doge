@@ -3,7 +3,7 @@
 <div align="center">
 <h4>
 
-English | [简体中文](https://github.com/SamllDoge/small-doge/blob/main/recipes/doge/README_zh.md)
+English | [简体中文](https://github.com/SmallDoges/small-doge/blob/main/recipes/doge/README_zh.md)
 
 </h4>
 </div>
