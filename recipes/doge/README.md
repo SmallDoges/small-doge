@@ -88,7 +88,7 @@ Here we recommend using [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-t
 
 ```shell
 # Fill in the dataset path, save path, tokenizer path, sample number, maximum length, and number of processes
-python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SamllDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
+python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SmallDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
 ```
 
 > [!NOTE]
