@@ -40,8 +40,6 @@ if stale_egg_info.exists():
 # IMPORTANT: all dependencies should be listed here with their version requirements, if any.
 #   * If a dependency is fast-moving (e.g. transformers), pin to the exact version
 _deps = [
-    "latex2sympy2_extended>=0.9.3",
-    "math_verify>=0.3.3",
     "accelerate>=1.2.1",
     "bitsandbytes>=0.43.0",
     "ruff>=0.9.0",
@@ -53,8 +51,9 @@ _deps = [
     "hf_transfer>=0.1.4",
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
+    "latex2sympy2_extended>=1.0.6",
     "lighteval @ git+https://github.com/huggingface/lighteval.git@main",
-    "math-verify>=0.3.3",  # Used for math verification in grpo
+    "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "pytest",
