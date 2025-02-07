@@ -157,8 +157,6 @@ def main(script_args, training_args, model_args, model_config):
 
     # Save everything else on main process
     kwargs = {
-        "dataset": list(script_args.dataset_name),
-        "dataset_tags": list(script_args.dataset_name),
         "tags": ["small-doge"],
     }
     if trainer.accelerator.is_main_process:
