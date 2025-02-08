@@ -6,7 +6,7 @@ from datasets import load_from_disk
 from datasets import load_dataset
 
 dataset = load_dataset('json', data_files='./dataset/mobvoi_seq_monkey_general_open_corpus.jsonl', split='train', num_proc=8, cache_dir='./dataset')
-dataset.save_to_disk('./dataset', num_proc=8)
+
 
 def process_monkey_general(example, tokenizer, max_length=2048):
     text = example['text']
@@ -35,9 +35,10 @@ def main(args):
     dataset.save_to_disk(args.output_path)
 
 if __name__ == '__main__':
+    dataset.save_to_disk('./dataset', num_proc=8)
     parser = ArgumentParser()
     parser.add_argument('--dataset_path', type=str, default='./dataset')
-    parser.add_argument('--mtokenizer_path', type=str, default='./examples/tokenizer_new/')
+    parser.add_argument('--mtokenizer_path', type=str, default='./tokenizer_new')
     parser.add_argument('--output_path', type=str, default='./outputs')
     parser.add_argument('--max_length', type=int, default=2048)
     parser.add_argument("--num_proc", type=int, default=8)
