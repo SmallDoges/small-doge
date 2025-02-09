@@ -144,7 +144,7 @@ python ./examples/utils/concatenate_pt_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/pt.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/pt.py --config recipes/doge/Doge-20M/config_full.yaml
 ```
 
 > [!NOTE]
@@ -238,7 +238,7 @@ python ./examples/utils/concatenate_ft_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -250,7 +250,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_fil
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/dpo.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/dpo.py --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
 ```
 
 > [!NOTE]
@@ -345,7 +345,7 @@ python ./examples/utils/concatenate_ft_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -357,7 +357,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_fil
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/grpo.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
 ```
 
 > [!NOTE]

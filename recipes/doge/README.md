@@ -144,7 +144,7 @@ We support training the model using Single GPU, DDP, or DeepSpeed ZeRO-2 and ZeR
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/pt.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/pt.py --config recipes/doge/Doge-20M/config_full.yaml
 ```
 
 > [!NOTE]
@@ -238,7 +238,7 @@ We first SFT the model to make it generate responses that follow the `prompt`.
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -250,7 +250,7 @@ Then we use the DPO algorithm to align the model with human preferences after SF
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/dpo.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/dpo.py --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
 ```
 
 > [!NOTE]
@@ -346,7 +346,7 @@ We first DFT the model to learn powerful thinking and reasoning capabilities fro
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -358,7 +358,7 @@ Then we use the GRPO algorithm to reinforce the model after DFT to make the mode
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/grpo.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
 ```
 
 > [!NOTE]
