@@ -15,7 +15,7 @@
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import List, Optional, Union
+from typing import List, Dict, Optional, Union
 from datasets import load_dataset, load_from_disk, concatenate_datasets, Dataset, DatasetDict
 from transformers import AutoTokenizer
 from argparse import ArgumentParser
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PTDatasetsArguments:
     tokenizer_name_or_path: str = field(metadata={"help": "The name or path of the tokenizer to use."})
-    datasets_name_and_ratio: List[dict] = field(metadata={"help": "The name or path of the dataset to download, and the ratio of each dataset for mixed final dataset."})
+    datasets_name_and_ratio: List[Dict[str, float]] = field(metadata={"help": "The name or path of the dataset to download, and the ratio of each dataset for mixed final dataset."})
     split: str = field(default="all", metadata={"help": "The split to download."})
     save_dir: str = field(default="./datasets", metadata={"help": "The directory to save the dataset."})
     cache_dir: str = field(default="./cache", metadata={"help": "The directory to cache the dataset."})
@@ -77,10 +77,12 @@ def get_pt_datasets(args: PTDatasetsArguments):
         # process the dataset
         column_names = dataset.column_names
         dataset_len = len(dataset)
-        example_len = (args.train_examples + args.test_examples) * dataset_ratio
+        num_train_examples = int(args.train_examples * dataset_ratio)
+        num_test_examples = int(args.test_examples * dataset_ratio)
+        example_len = num_train_examples + num_test_examples
         if dataset_len < example_len:
             raise ValueError(f"The dataset {dataset_name_or_path} does not have enough examples. {dataset_len} < {example_len}")
-        dataset = dataset.shuffle(seed=args.seed).select(range(example_len))
+        dataset = dataset.shuffle(seed=args.seed).select(range(int(example_len)))
         dataset = dataset.map(
             process_map, 
             fn_kwargs={
@@ -101,7 +103,7 @@ def get_pt_datasets(args: PTDatasetsArguments):
     datasets: Dataset = concatenate_datasets(datasets)
 
     # split train and test sets and shuffle
-    datasets = datasets.train_test_split(test_size=args.test_examples, shuffle=True, seed=args.seed)
+    datasets = datasets.train_test_split(train_size=num_train_examples, test_size=num_test_examples, shuffle=True, seed=args.seed)
 
     # save dataset
     datasets.save_to_disk(f"{args.save_dir}", num_proc=args.num_proc)
