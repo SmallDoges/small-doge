@@ -5,7 +5,8 @@ logging_steps: 100
 report_to:
 - tensorboard
 - wandb
-save_strategy: "no"
+save_strategy: steps
+save_steps: 100
 output_dir: data/Doge-20M
 overwrite_output_dir: true
 push_to_hub: true
@@ -45,7 +46,7 @@ preprocessing_num_workers: 8
 # PT trainer arguments
 seed: 233
 do_train: True
-max_train_steps: 8000
+max_steps: 8000
 per_device_train_batch_size: 1
 do_eval: True
 eval_strategy: steps

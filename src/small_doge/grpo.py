@@ -17,13 +17,12 @@ import os
 import re
 import sys
 from dataclasses import dataclass, field
-from functools import partial
 
 import datasets
 import math
 import torch
 import transformers
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
@@ -265,7 +264,10 @@ def main(script_args, training_args, model_args):
     ###############
     # Load datasets
     ###############
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    if re.match(r'^[^/]+/[^/]+$', script_args.dataset_name):
+        dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    else:
+        dataset = load_from_disk(script_args.dataset_name)
 
     # Get reward functions
     REWARD_FUNCS_REGISTRY = {
