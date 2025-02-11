@@ -15,7 +15,7 @@ hub_model_id: Doge-160M
 hub_strategy: every_save
 
 # Model arguments
-mmodel_config:
+model_config:
   vocab_size: 32768
   hidden_size: 768
   intermediate_size: 1536

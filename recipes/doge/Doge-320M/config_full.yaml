@@ -15,7 +15,7 @@ hub_model_id: Doge-320M
 hub_strategy: every_save
 
 # Model arguments
-mmodel_config:
+model_config:
   vocab_size: 32768
   hidden_size: 1024
   intermediate_size: 2048
