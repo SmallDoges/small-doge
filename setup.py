@@ -60,7 +60,7 @@ _deps = [
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
     "torch>=2.5.1",
-    "transformers @ git+https://github.com/LoserCheems/transformers.git@support-constant-lr-with-cooldown",
+    "transformers @ git+https://github.com/huggingface/transformers.git@main",
     "trl @ git+https://github.com/huggingface/trl.git@main",
     "vllm>=0.7.1",
     "wandb>=0.19.1",
@@ -90,7 +90,7 @@ extras["deepspeed"] = deps_list("deepspeed")
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
     deps["latex2sympy2_extended"],
-    deps["math_verify"],
+    deps["math-verify"],
     deps["accelerate"],
     deps["bitsandbytes"],
     deps["einops"],

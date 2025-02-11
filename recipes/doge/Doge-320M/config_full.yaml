@@ -16,7 +16,7 @@ hub_model_id: Doge-320M
 hub_strategy: every_save
 
 # Model arguments
-mmodel_config:
+model_config:
   vocab_size: 32768
   hidden_size: 1024
   intermediate_size: 2048
@@ -46,7 +46,7 @@ preprocessing_num_workers: 8
 # PT trainer arguments
 seed: 233
 do_train: True
-max_steps: 24000
+max_steps: 32000
 per_device_train_batch_size: 1
 do_eval: True
 eval_strategy: steps
