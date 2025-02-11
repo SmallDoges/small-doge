@@ -79,7 +79,7 @@ def main(script_args, training_args, model_args, model_config):
     ###############
     # Load datasets
     ###############
-    dataset = load_from_disk(script_args.dataset_name, name=script_args.dataset_config)
+    dataset = load_from_disk(script_args.dataset_name)
 
     ################
     # Load tokenizer
