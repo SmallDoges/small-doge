@@ -20,7 +20,7 @@ from argparse import ArgumentParser
 import datasets
 import torch
 import transformers
-from datasets import load_dataset
+from datasets import load_from_disk
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -79,7 +79,7 @@ def main(script_args, training_args, model_args, model_config):
     ###############
     # Load datasets
     ###############
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    dataset = load_from_disk(script_args.dataset_name)
 
     ################
     # Load tokenizer

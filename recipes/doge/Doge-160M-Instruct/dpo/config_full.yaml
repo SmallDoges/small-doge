@@ -5,7 +5,8 @@ logging_steps: 100
 report_to:
 - tensorboard
 - wandb
-save_strategy: "no"
+save_strategy: steps
+save_steps: 100
 output_dir: data/Doge-160M-Instruct-DPO
 overwrite_output_dir: true
 push_to_hub: true
