@@ -35,17 +35,20 @@ from transformers.generation import GenerationMixin
 from transformers.modeling_attn_mask_utils import AttentionMaskConverter
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
 from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
-from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS, PreTrainedModel
+from transformers.modeling_utils import PreTrainedModel
 from transformers.processing_utils import Unpack
 from transformers.utils import (
     LossKwargs,
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
+    is_torch_flex_attn_available,
     logging,
     replace_return_docstrings,
 )
 from .configuration_doge import DogeConfig
 
+if is_torch_flex_attn_available():
+    from torch.nn.attention.flex_attention import flex_attention
 
 logger = logging.get_logger(__name__)
 
@@ -215,6 +218,122 @@ def eager_attention_forward(
     attn_output = attn_output.transpose(1, 2).contiguous()
 
     return attn_output, attn_weights
+
+
+def sdpa_attention_forward(
+    module: nn.Module,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    attention_mask: Optional[torch.Tensor],
+    dropout: float = 0.0,
+    scaling: Optional[float] = None,
+    is_causal: Optional[bool] = None,
+    **kwargs,
+) -> Tuple[torch.Tensor, None]:
+    key = repeat_kv(key, module.num_key_value_groups)
+    value = repeat_kv(value, module.num_key_value_groups)
+
+    causal_mask = attention_mask
+    if attention_mask is not None:
+        causal_mask = causal_mask[:, :, :, : key.shape[-2]]
+
+    # SDPA with memory-efficient backend is bugged with non-contiguous inputs and custom attn_mask for some torch versions
+    # Reference: https://github.com/pytorch/pytorch/issues/112577.
+    query = query.contiguous()
+    key = key.contiguous()
+    value = value.contiguous()
+
+    # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
+    # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
+    if is_causal is None:
+        is_causal = causal_mask is None and query.shape[2] > 1
+
+    # Shapes (e.g. query.shape[2]) are tensors during jit tracing, resulting in `is_causal` being a tensor.
+    # We convert it to a bool for the SDPA kernel that only accepts bools.
+    if torch.jit.is_tracing() and isinstance(is_causal, torch.Tensor):
+        is_causal = is_causal.item()
+
+    # NOTE: As of pytorch 2.5.1, SDPA backward pass of cuDNN is still incorrect, so we disable cuDNN SDPA (see https://github.com/pytorch/pytorch/issues/138581)
+    torch.backends.cuda.enable_cudnn_sdp(False)
+    attn_output = F.scaled_dot_product_attention(
+        query=query,
+        key=key,
+        value=value,
+        attn_mask=causal_mask,
+        dropout_p=dropout,
+        scale=scaling,
+        is_causal=is_causal,
+    )
+    attn_output = attn_output.transpose(1, 2).contiguous()
+
+    return attn_output, None
+
+
+def flex_attention_forward(
+    module: nn.Module,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    attention_mask: Optional[torch.Tensor],
+    scaling: Optional[float] = None,
+    is_causal: Optional[bool] = None,
+    softcap: Optional[float] = None,
+    head_mask: Optional[torch.Tensor] = None,
+    **kwargs,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    causal_mask = attention_mask
+    if attention_mask is not None:
+        causal_mask = causal_mask[:, :, :, : key.shape[-2]]
+
+    if is_causal is None:
+        is_causal = causal_mask is None and query.shape[2] > 1
+
+    def causal_mod(score, batch, head, q_idx, kv_idx):
+        if softcap is not None:
+            score = softcap * torch.tanh(score / softcap)
+        if causal_mask is not None:
+            score = score + causal_mask[batch][0][q_idx][kv_idx]
+        if head_mask is not None:
+            score = score + head_mask[batch][head][0][0]
+        return score
+
+    def dynamic_mod(score, batch, head, q_idx, kv_idx):
+        if softcap is not None:
+            score = softcap * torch.tanh(score / softcap)
+        if causal_mask is not None:
+            score = score + causal_mask[batch][head][q_idx][kv_idx]
+        if head_mask is not None:
+            score = score + head_mask[batch][head][0][0]
+        return score
+
+    # TODO: flex_attention: As of pytorch 2.5.1, captured buffers that require grad are not yet supported.
+    # NOTE: So we only use flex_attention in inference mode.
+    mask_mod = causal_mod if is_causal or module.training else dynamic_mod
+
+    attn_output, attention_weights = flex_attention(
+        query=query,
+        key=key,
+        value=value,
+        score_mod=mask_mod,
+        enable_gqa=True,
+        scale=scaling,
+        # Last time checked on PyTorch == 2.5.1: Flex Attention always computes the lse regardless.
+        # For simplification, we thus always return it as no additional computations are introduced.
+        return_lse=True,
+    )
+    # lse is returned in float32
+    attention_weights = attention_weights.to(value.dtype)
+    attn_output = attn_output.transpose(1, 2).contiguous()
+
+    return attn_output, attention_weights
+
+
+ALL_ATTENTION_FUNCTIONS = {
+    "eager": eager_attention_forward,
+    "sdpa": sdpa_attention_forward,
+    "flex_attention": flex_attention_forward,
+}
 
 
 class DogeDynamicMaskAttention(nn.Module):
@@ -503,7 +622,7 @@ class DogePreTrainedModel(PreTrainedModel):
     _no_split_modules = ["DogeDecoderLayer"]
     _skip_keys_device_placement = ["past_key_values"]
     _supports_sdpa = True
-    _supports_flex_attn = True
+    # _supports_flex_attn = True # TODO: enable this when flex_attention is fully supported
     _supports_cache_class = True
     _supports_quantized_cache = True
     _supports_static_cache = True
