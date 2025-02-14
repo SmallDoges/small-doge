@@ -38,7 +38,9 @@ use_vllm: false
 vllm_device: auto
 vllm_gpu_memory_utilization: 0.7
 do_train: true
+max_steps: -1
 num_train_epochs: 1
+num_generations: 8 # Be consistent with preprocessing_num_workers or num_processes
 per_device_train_batch_size: 1
 do_eval: true
 evaluation_strategy: steps
