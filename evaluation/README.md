@@ -24,5 +24,5 @@ If you are a Windows user, you can use the following command to evaluate the mod
 . ./evaluation/eval_downstream_tasks.ps1
 ```
 
-> [!NOTE]
+> [!TIP]
 > You can modify `MODEL` and `OUTPUT_DIR` in the script to evaluate different models and save the results to different directories.
