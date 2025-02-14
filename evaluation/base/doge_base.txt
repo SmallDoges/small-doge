@@ -1,0 +1,8 @@
+original|mmlu|5|0
+lighteval|triviaqa|5|0
+lighteval|arc:easy|5|0
+leaderboard|arc:challenge|5|0
+lighteval|piqa|5|0
+leaderboard|hellaswag|5|0
+lighteval|openbookqa|5|0
+leaderboard|winogrande|5|0
