@@ -13,17 +13,17 @@ def download_ultrafeedback_binarized(save_dir, cache_dir, num_proc):
     print(dataset)
     dataset.save_to_disk(save_dir + "/ultrafeedback_binarized", num_proc=num_proc)
 
-def download_bespoke_stratos(save_dir, cache_dir, num_proc):
-    # Download bespoke_stratos dataset
-    dataset = load_dataset("HuggingFaceH4/Bespoke-Stratos-17k", num_proc=num_proc, cache_dir=cache_dir)
+def download_open_thoughts(save_dir, cache_dir, num_proc):
+    # Download open-thoughts dataset
+    dataset = load_dataset("open-thoughts/OpenThoughts-114k", "default", num_proc=num_proc, cache_dir=cache_dir)
     print(dataset)
-    dataset.save_to_disk(save_dir + "/bespoke_stratos", num_proc=num_proc)
+    dataset.save_to_disk(save_dir + "/open_thoughts", num_proc=num_proc)
 
-def download_numinamath(save_dir, cache_dir, num_proc):
-    # Download numinamath dataset
-    dataset = load_dataset("AI-MO/NuminaMath-TIR", num_proc=num_proc, cache_dir=cache_dir)
+def download_openr1_math(save_dir, cache_dir, num_proc):
+    # Download openr1-math dataset
+    dataset = load_dataset("open-r1/OpenR1-Math-220k", "default", num_proc=num_proc, cache_dir=cache_dir)
     print(dataset)
-    dataset.save_to_disk(save_dir + "/numinamath", num_proc=num_proc)
+    dataset.save_to_disk(save_dir + "/openr1_math", num_proc=num_proc)
 
 # You can also download other datasets
 
@@ -34,8 +34,8 @@ def main(args):
     download_ultrafeedback_binarized(args.save_dir, args.cache_dir, args.num_proc)
 
     # For Reasoning fine-tuning
-    download_bespoke_stratos(args.save_dir, args.cache_dir, args.num_proc)
-    download_numinamath(args.save_dir, args.cache_dir, args.num_proc)
+    download_open_thoughts(args.save_dir, args.cache_dir, args.num_proc)
+    download_openr1_math(args.save_dir, args.cache_dir, args.num_proc)
 
 
 if __name__ == "__main__":

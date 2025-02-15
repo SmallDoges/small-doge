@@ -33,12 +33,12 @@ def concatenate_dpo_datasets(datasets_dir, save_dir, num_proc):
     dataset.save_to_disk(save_dir + "/dpo_dataset", num_proc=num_proc, num_shards={'train': 16, 'test': 1 })
 
 def concatenate_distill_datasets(datasets_dir, save_dir, num_proc):
-    bespoke_stratos_dataset = load_from_disk(datasets_dir + '/bespoke_stratos_processed')
+    open_thoughts_dataset = load_from_disk(datasets_dir + '/open_thoughts_processed')
     train_dataset : Dataset = concatenate_datasets([
-        bespoke_stratos_dataset['train'],
+        open_thoughts_dataset['train'],
     ])
     test_dataset : Dataset = concatenate_datasets([
-        bespoke_stratos_dataset['test'],
+        open_thoughts_dataset['test'],
     ])
     dataset = DatasetDict({
         'train': train_dataset,
@@ -48,12 +48,12 @@ def concatenate_distill_datasets(datasets_dir, save_dir, num_proc):
     dataset.save_to_disk(save_dir + "/distill_dataset", num_proc=num_proc, num_shards={'train': 16, 'test': 1 })
 
 def concatenate_grpo_datasets(datasets_dir, save_dir, num_proc):
-    numinamath_dataset = load_from_disk(datasets_dir + '/numinamath_processed')
+    openr1_math_dataset = load_from_disk(datasets_dir + '/openr1_math_processed')
     train_dataset : Dataset = concatenate_datasets([
-        numinamath_dataset['train'],
+        openr1_math_dataset['train'],
     ])
     test_dataset : Dataset = concatenate_datasets([
-        numinamath_dataset['test'],
+        openr1_math_dataset['test'],
     ])
     dataset = DatasetDict({
         'train': train_dataset,
