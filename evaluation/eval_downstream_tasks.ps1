@@ -19,6 +19,7 @@ if ($MODEL -match "Instruct$") {
 else {
     lighteval accelerate "pretrained=$MODEL,max_length=2048,trust_remote_code=True" `
     "evaluation/base/doge_base.txt" `
+    --custom-tasks evaluation/base/tasks.py `
     --override-batch-size 1 `
     --output-dir $OUTPUT_DIR
 }
