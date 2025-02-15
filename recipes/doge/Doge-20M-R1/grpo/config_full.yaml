@@ -18,6 +18,7 @@ hub_strategy: every_save
 # Model arguments
 model_name_or_path: <your-hub-id>/Doge-20M-Distill
 model_revision: main
+trust_remote_code: True
 torch_dtype: bfloat16
 
 # Data training arguments
@@ -47,7 +48,7 @@ evaluation_strategy: steps
 eval_steps: 100
 per_device_eval_batch_size: 1
 optim: adamw_torch
-learning_rate: 8.0e-4
+learning_rate: 8.0e-5
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1

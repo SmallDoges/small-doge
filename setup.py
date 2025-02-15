@@ -52,7 +52,7 @@ _deps = [
     "isort>=5.12.0",
     "latex2sympy2_extended>=1.0.6",
     "lighteval",
-    "math_verify==0.5.2",  # Used for math verification in grpo
+    "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "peft>=0.14.0",
