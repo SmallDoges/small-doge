@@ -1,9 +1,8 @@
 import re
-import numpy as np
 
 from lighteval.tasks.lighteval_task import LightevalTaskConfig
 from lighteval.tasks.requests import Doc
-from lighteval.metrics.metrics import Metrics, SampleLevelMetric, MetricCategory, MetricUseCase, ExactMatches
+from lighteval.metrics.metrics import Metrics
 import lighteval.tasks.default_prompts as prompt
 
 
@@ -23,32 +22,6 @@ def prompt_hellaswag(line, task_name: str = None):
         query=preprocess(line["activity_label"] + ": " + ctx),
         choices=[" " + preprocess(ending) for ending in line["endings"]],
         gold_index=int(line["label"]) if line["label"] != "" else -1,  # -1 for test
-    )
-
-def prompt_commonsense_qa(line, task_name: str = None):
-    return Doc(
-        task_name=task_name,
-        query=line["question"],
-        choices=[f" {c}" for c in line["choices"]["text"]],
-        gold_index=line["choices"]["label"].index(line["answerKey"].strip()),
-        instruction="",
-    )
-
-def mmlu_pro_mc_prompt(line, task_name: str = None):
-    options = line["options"]
-    letters = [chr(ord("A") + i) for i in range(len(options))]
-    topic = line["category"].replace('_', ' ')
-    query = f"The following are multiple choice questions (with answers) about {topic}.\n\n"
-    query += line["question"] + "\n"
-    query += "".join([f"{letter}. {choice}\n" for letter, choice in zip(letters, options)])
-    query += "Answer:"
-
-    return Doc(
-        task_name=task_name,
-        query=query,
-        choices=letters,
-        gold_index=line["answer_index"],
-        instruction=f"The following are multiple choice questions (with answers) about {topic}.\n\n",
     )
 
 def mmlu_cloze_prompt(line, task_name: str = None):
@@ -71,14 +44,6 @@ def bbh_prompt(line, task_name: str = None):
         query="Question: " + line["input"] + "\nAnswer: ",
         choices=[line["target"]],
         gold_index=0,
-    )
-
-def prompt_math(line, task_name: str = None):
-    return Doc(
-        task_name=task_name,
-        query=f"{line['problem']}\nPlease reason step by step, and put your final answer within \\boxed{{}}.\n\n",
-        gold_index=0,
-        choices=[f"{line['solution']}\n\n"],
     )
 
 
@@ -123,15 +88,6 @@ TASKS_TABLE = [
         metric=[Metrics.loglikelihood_acc_norm_nospace],
     ),
     LightevalTaskConfig(
-        name="commonsense_qa",
-        prompt_function=prompt_commonsense_qa,
-        suite=["custom"],
-        hf_repo="tau/commonsense_qa",
-        hf_subset="default",
-        hf_revision="94630fe30dad47192a8546eb75f094926d47e155",
-        metric=[Metrics.loglikelihood_acc_norm_nospace],
-    ),
-    LightevalTaskConfig(
         name="winogrande",
         prompt_function=prompt.winogrande,
         suite=["custom"],
@@ -167,17 +123,6 @@ TASKS_TABLE = [
         few_shots_select="random_sampling_from_train",
     ),
     LightevalTaskConfig(
-        name="mmlu_pro",
-        prompt_function=mmlu_pro_mc_prompt,
-        suite=["custom"],
-        hf_repo="TIGER-Lab/MMLU-Pro",
-        hf_subset="default",
-        hf_revision="3373e0b32277875b8db2aa555a333b78a08477ea",
-        metric=[Metrics.loglikelihood_acc_norm_nospace],
-        evaluation_splits=["test"],
-        few_shots_split="validation",
-    ),
-    LightevalTaskConfig(
         name="gsm8k",
         prompt_function=prompt.gsm8k,
         suite=["custom"],
@@ -190,18 +135,6 @@ TASKS_TABLE = [
         generation_size=256,
         stop_sequence=["Question:", "Question"],
         few_shots_select="random_sampling_from_train",
-    ),
-    LightevalTaskConfig(
-        name="mmlu_stem",
-        prompt_function=mmlu_cloze_prompt,
-        suite=["custom"],
-        hf_repo="TIGER-Lab/MMLU-STEM",
-        hf_subset="default",
-        hf_revision="78a4b40757f31688d00426d1372dbbc6070d33a8",
-        hf_avail_splits=["test"],
-        evaluation_splits=["test"],
-        metric=[Metrics.loglikelihood_acc_norm_nospace],
-        generation_size=-1,
     ),
     LightevalTaskConfig(
         name="mmlu",
