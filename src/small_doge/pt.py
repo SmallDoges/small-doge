@@ -87,7 +87,6 @@ def main(script_args, training_args, model_args, model_config):
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code, use_fast=True
     )
-    tokenizer.pad_token = tokenizer.eos_token
 
     ###################
     # Model init kwargs
