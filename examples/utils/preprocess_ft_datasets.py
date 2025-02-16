@@ -49,10 +49,13 @@ def open_thoughts_map(example, tokenizer):
         {"role": "user", "content": messages[0]["value"]},
         {"role": "assistant", "content": messages[1]["value"]},
     ]
-    example['text'] = tokenizer.apply_chat_template(
-        conversations,
-        tokenize=False,
-    )
+
+    # example['text'] = tokenizer.apply_chat_template(
+    #     conversations,
+    #     tokenize=False,
+    # )
+
+    example['text'] = conversations
     return example
 
 SYSTEM_PROMPT_FOR_GRPO = (
@@ -132,11 +135,9 @@ def process_open_thoughts(tokenizer, datasets_dir, num_proc):
 
 def process_openr1_math(tokenizer, datasets_dir, num_proc):
     dataset = load_from_disk(datasets_dir + '/openr1_math')
-    columns = dataset['train'].column_names
     dataset = dataset.map(
         openr1_math_map,
         num_proc=num_proc,
-        remove_columns=columns,
         desc="Processing openr1_math"
     )
     for split in dataset:
