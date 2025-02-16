@@ -55,7 +55,7 @@ def open_thoughts_map(example, tokenizer):
     #     tokenize=False,
     # )
 
-    example['text'] = conversations
+    example['messages'] = conversations
     return example
 
 SYSTEM_PROMPT_FOR_GRPO = (
