@@ -1,0 +1,6 @@
+extended|ifeval|0|0
+lighteval|arc:easy|0|0
+leaderboard|arc:challenge|0|0
+lighteval|piqa|0|0
+original|mmlu|0|0
+leaderboard|hellaswag|0|0

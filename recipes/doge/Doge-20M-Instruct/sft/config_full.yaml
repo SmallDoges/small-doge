@@ -5,7 +5,8 @@ logging_steps: 100
 report_to:
 - tensorboard
 - wandb
-save_strategy: "no"
+save_strategy: steps
+save_steps: 100
 output_dir: data/Doge-20M-Instruct-SFT
 overwrite_output_dir: true
 push_to_hub: true
@@ -17,6 +18,7 @@ hub_strategy: every_save
 # Model arguments
 model_name_or_path: SmallDoge/Doge-20M
 model_revision: main
+trust_remote_code: True
 torch_dtype: bfloat16
 
 # Data training arguments

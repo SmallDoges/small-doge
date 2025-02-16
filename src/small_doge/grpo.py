@@ -1,4 +1,4 @@
-# Copyright 2025 The SmallDoge Team. All rights reserved.
+# Copyright 2025 The HuggingFace Team and SmallDoge Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ import sys
 from dataclasses import dataclass, field
 
 import datasets
+import math
+import torch
 import transformers
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
@@ -40,12 +42,44 @@ class GRPOScriptArguments(ScriptArguments):
 
     Args:
         reward_funcs (`list[str]`):
-            List of reward functions. Possible values: 'accuracy', 'format'.
+            List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine'.
+        cosine_min_value_wrong (`float`):
+            Minimum reward for cosine scaling for wrong answers.
+        cosine_max_value_wrong (`float`):
+            Maximum reward for cosine scaling for wrong answers.
+        cosine_min_value_correct (`float`):
+            Minimum reward for cosine scaling for correct answers.
+        cosine_max_value_correct (`float`):
+            Maximum reward for cosine scaling for correct answers.
+        cosine_max_len (`int`):
+            Maximum length for cosine scaling.
     """
 
     reward_funcs: list[str] = field(
-        default_factory=lambda: ["accuracy", "format"],
-        metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
+        default_factory=lambda: ["accuracy", "format", "reasoning_steps", "cosine"],
+        metadata={
+            "help": "List of reward functions. Possible values: 'accuracy', 'format', 'reasoning_steps', 'cosine'"
+        },
+    )
+    cosine_min_value_wrong: float = field(
+        default=0.0,
+        metadata={"help": "Minimum reward for wrong answers"},
+    )
+    cosine_max_value_wrong: float = field(
+        default=-0.5,
+        metadata={"help": "Maximum reward for wrong answers"},
+    )
+    cosine_min_value_correct: float = field(
+        default=0.5,
+        metadata={"help": "Minimum reward for correct answers"},
+    )
+    cosine_max_value_correct: float = field(
+        default=1.0,
+        metadata={"help": "Maximum reward for correct answers"},
+    )
+    cosine_max_len: int = field(
+        default=1000,
+        metadata={"help": "Maximum length for scaling"},
     )
 
 
@@ -54,7 +88,11 @@ def accuracy_reward(completions, solution, **kwargs):
     contents = [completion[0]["content"] for completion in completions]
     rewards = []
     for content, sol in zip(contents, solution):
-        gold_parsed = parse(sol, extraction_mode="first_match", extraction_config=[LatexExtractionConfig()])
+        gold_parsed = parse(
+            sol,
+            extraction_mode="first_match",
+            extraction_config=[LatexExtractionConfig()],
+        )
         if len(gold_parsed) != 0:
             # We require the answer to be provided in correct latex (no malformed operators)
             answer_parsed = parse(
@@ -66,7 +104,7 @@ def accuracy_reward(completions, solution, **kwargs):
                             malformed_operators=False,
                             basic_latex=True,
                             equations=True,
-                            boxed=True,
+                            boxed="all",
                             units=True,
                         ),
                         # Ensures that boxed is tried first
@@ -95,18 +133,97 @@ def format_reward(completions, **kwargs):
     return [1.0 if match else 0.0 for match in matches]
 
 
-reward_funcs_registry = {
-    "accuracy": accuracy_reward,
-    "format": format_reward,
-}
+def reasoning_steps_reward(completions, **kwargs):
+    """Reward function that checks for clear step-by-step reasoning.
+    Regex pattern:
+        Step \d+: - matches "Step 1:", "Step 2:", etc.
+        ^\d+\. - matches numbered lists like "1.", "2.", etc. at start of line
+        \n- - matches bullet points with hyphens
+        \n\* - matches bullet points with asterisks
+        First,|Second,|Next,|Finally, - matches transition words
+    """
+    pattern = r"(Step \d+:|^\d+\.|\n-|\n\*|First,|Second,|Next,|Finally,)"
+    completion_contents = [completion[0]["content"] for completion in completions]
+    matches = [len(re.findall(pattern, content)) for content in completion_contents]
+
+    # Magic nubmer 3 to encourage 3 steps and more, otherwise partial reward
+    return [min(1.0, count / 3) for count in matches]
 
 
-SYSTEM_PROMPT = (
-    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant "
-    "first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning "
-    "process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., "
-    "<think> reasoning process here </think><answer> answer here </answer>"
-)
+def get_cosine_scaled_reward(
+    min_value_wrong: float = -1.0,
+    max_value_wrong: float = -0.5,
+    min_value_correct: float = 0.5,
+    max_value_correct: float = 1.0,
+    max_len: int = 1000,
+):
+    def cosine_scaled_reward(completions, solution, **kwargs):
+        """Reward function that scales based on completion length using a cosine schedule.
+
+        Shorter correct solutions are rewarded more than longer ones.
+        Longer incorrect solutions are penalized less than shorter ones.
+
+        Args:
+            completions: List of model completions
+            solution: List of ground truth solutions
+
+        This function is parameterized by the following arguments:
+            min_value_wrong: Minimum reward for wrong answers
+            max_value_wrong: Maximum reward for wrong answers
+            min_value_correct: Minimum reward for correct answers
+            max_value_correct: Maximum reward for correct answers
+            max_len: Maximum length for scaling
+        """
+        contents = [completion[0]["content"] for completion in completions]
+        rewards = []
+
+        for content, sol in zip(contents, solution):
+            gold_parsed = parse(sol, extraction_mode="first_match", extraction_config=[LatexExtractionConfig()])
+            if len(gold_parsed) == 0:
+                rewards.append(1.0)  # Skip unparseable examples
+                print("Failed to parse gold solution: ", sol)
+                continue
+
+            answer_parsed = parse(
+                content,
+                extraction_config=[
+                    LatexExtractionConfig(
+                        normalization_config=NormalizationConfig(
+                            nits=False,
+                            malformed_operators=False,
+                            basic_latex=True,
+                            equations=True,
+                            boxed=True,
+                            units=True,
+                        ),
+                        boxed_match_priority=0,
+                        try_extract_without_anchor=False,
+                    )
+                ],
+                extraction_mode="first_match",
+            )
+
+            is_correct = verify(answer_parsed, gold_parsed)
+            gen_len = len(content)
+
+            # Apply cosine scaling based on length
+            progress = gen_len / max_len
+            cosine = math.cos(progress * math.pi)
+
+            if is_correct:
+                min_value = min_value_correct
+                max_value = max_value_correct
+            else:
+                # Swap min/max for incorrect answers
+                min_value = max_value_wrong
+                max_value = min_value_wrong
+
+            reward = min_value + 0.5 * (max_value - min_value) * (1.0 + cosine)
+            rewards.append(float(reward))
+
+        return rewards
+
+    return cosine_scaled_reward
 
 
 def main(script_args, training_args, model_args):
@@ -147,10 +264,41 @@ def main(script_args, training_args, model_args):
     ###############
     # Load datasets
     ###############
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    if re.match(r'^[^/]+/[^/]+$', script_args.dataset_name):
+        dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    else:
+        dataset = load_from_disk(script_args.dataset_name)
 
     # Get reward functions
-    reward_funcs = [reward_funcs_registry[func] for func in script_args.reward_funcs]
+    REWARD_FUNCS_REGISTRY = {
+        "accuracy": accuracy_reward,
+        "format": format_reward,
+        "reasoning_steps": reasoning_steps_reward,
+        "cosine": get_cosine_scaled_reward(
+            min_value_wrong=script_args.cosine_min_value_wrong,
+            max_value_wrong=script_args.cosine_max_value_wrong,
+            min_value_correct=script_args.cosine_min_value_correct,
+            max_value_correct=script_args.cosine_max_value_correct,
+            max_len=script_args.cosine_max_len,
+        ),
+    }
+    reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
+
+    ###################
+    # Model init kwargs
+    ###################
+    logger.info("*** Initializing model kwargs ***")
+    torch_dtype = (
+        model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
+    )
+    model_kwargs = dict(
+        revision=model_args.model_revision,
+        trust_remote_code=model_args.trust_remote_code,
+        attn_implementation=model_args.attn_implementation,
+        torch_dtype=torch_dtype,
+        use_cache=False if training_args.gradient_checkpointing else True,
+    )
+    training_args.model_init_kwargs = model_kwargs
 
     #############################
     # Initialize the GRPO trainer
@@ -189,9 +337,6 @@ def main(script_args, training_args, model_args):
 
     # Save everything else on main process
     kwargs = {
-        "finetuned_from": model_args.model_name_or_path,
-        "dataset": list(script_args.dataset_name),
-        "dataset_tags": list(script_args.dataset_name),
         "tags": ["small-doge"],
     }
     if trainer.accelerator.is_main_process:

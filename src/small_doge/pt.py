@@ -20,7 +20,7 @@ from argparse import ArgumentParser
 import datasets
 import torch
 import transformers
-from datasets import load_dataset
+from datasets import load_from_disk
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -79,7 +79,7 @@ def main(script_args, training_args, model_args, model_config):
     ###############
     # Load datasets
     ###############
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    dataset = load_from_disk(script_args.dataset_name)
 
     ################
     # Load tokenizer
@@ -157,8 +157,6 @@ def main(script_args, training_args, model_args, model_config):
 
     # Save everything else on main process
     kwargs = {
-        "dataset": list(script_args.dataset_name),
-        "dataset_tags": list(script_args.dataset_name),
         "tags": ["small-doge"],
     }
     if trainer.accelerator.is_main_process:

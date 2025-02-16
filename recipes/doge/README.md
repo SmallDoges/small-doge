@@ -3,7 +3,7 @@
 <div align="center">
 <h4>
 
-English | [简体中文](https://github.com/SamllDoge/small-doge/blob/main/recipes/doge/README_zh.md)
+English | [简体中文](https://github.com/SmallDoges/small-doge/blob/main/recipes/doge/README_zh.md)
 
 </h4>
 </div>
@@ -56,7 +56,7 @@ python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_di
 ```
 
 > [!NOTE]
-> Due to the large size of the dataset, at least 2TB of storage space is required. If you do not have enough storage space, you can choose to download part of the dataset by yourself [here](./utils/download_pt_datasets.py).
+> Due to the large size of the dataset, at least 2TB of storage space is required. If you do not have enough storage space, you can choose to download part of the dataset by yourself [here](../../examples/utils/download_pt_datasets.py).
 > You can freely change the downloaded dataset. We provide this example just to reproduce the current open-source model.
 
 ### 2.2 Preprocess the dataset
@@ -84,11 +84,11 @@ conversation = [
 ]
 ```
 
-Here we recommend using [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) to process the dataset. It is trained by the `Llama-3.3` tokenizer on the `smollm-corpus`, with a vocabulary size of `32768`. The training script can be found [here](ttps://github.com/SamllDoge/small-doge/blob/main/examples/utils/train_tokenizer_from_old.py).
+Here we recommend using [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) to process the dataset. It is trained by the `Llama-3.3` tokenizer on the `smollm-corpus`, with a vocabulary size of `32768`. The training script can be found [here](../../examples/utils/train_tokenizer_from_old.py).
 
 ```shell
 # Fill in the dataset path, save path, tokenizer path, sample number, maximum length, and number of processes
-python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SamllDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
+python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SmallDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
 ```
 
 > [!NOTE]
@@ -144,7 +144,7 @@ We support training the model using Single GPU, DDP, or DeepSpeed ZeRO-2 and ZeR
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/pt.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/pt.py --config recipes/doge/Doge-20M/config_full.yaml
 ```
 
 > [!NOTE]
@@ -238,7 +238,7 @@ We first SFT the model to make it generate responses that follow the `prompt`.
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -250,13 +250,13 @@ Then we use the DPO algorithm to align the model with human preferences after SF
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/dpo.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/dpo.py --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
 ```
 
 > [!NOTE]
 > The training command above is configured for a 1 x RTX 4090 (24GB) node. For different hardware and topologies, you may need to adjust the batch size and gradient accumulation steps.
 
-## 3.6 Usage
+### 3.6 Usage
 
 After fine-tuning is complete, we can use `AutoModelForCausalLM` of `Transformers` to load the model, and use `AutoTokenizer` to load `LlamaTokenizer`, and use `GenerationConfig` and `TextStreamer` to support streaming generation with sampling.
 
@@ -346,7 +346,7 @@ We first DFT the model to learn powerful thinking and reasoning capabilities fro
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -358,7 +358,7 @@ Then we use the GRPO algorithm to reinforce the model after DFT to make the mode
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/grpo.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
 ```
 
 > [!NOTE]

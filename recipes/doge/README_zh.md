@@ -3,7 +3,7 @@
 <div align="center">
 <h4>
 
-[English](https://github.com/SamllDoge/small-doge/blob/main/recipes/doge/README.md) | 简体中文
+[English](https://github.com/SmallDoges/small-doge/blob/main/recipes/doge/README.md) | 简体中文
 
 </h4>
 </div>
@@ -56,7 +56,7 @@ python ./examples/utils/download_pt_datasets.py --save_dir ./datasets --cache_di
 ```
 
 > [!NOTE]
-> 由于数据集过大, 至少需要 2TB 的存储空间. 如果您的存储空间不足, 可以自行在[这里](./utils/download_pt_datasets.py)选择部分数据集进行下载. 
+> 由于数据集过大, 至少需要 2TB 的存储空间. 如果您的存储空间不足, 可以自行在[这里](../../examples/utils/download_pt_datasets.py)选择部分数据集进行下载. 
 > 您可以自由更改下载的数据集, 我们提供这个示例仅仅是为了复现目前的开源模型.
 
 ### 2.2 预处理数据集
@@ -84,11 +84,11 @@ conversation = [
 ]
 ```
 
-在这里我们推荐使用 [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) 来处理数据集, 它是由 `Llama-3.3` 的分词器针对 `smollm-corpus` 训练得到的, 词表大小为 `32768` , 训练脚本可以在 [这里](https://github.com/SamllDoge/small-doge/blob/main/examples/utils/train_tokenizer_from_old.py) 找到.
+在这里我们推荐使用 [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-tokenizer) 来处理数据集, 它是由 `Llama-3.3` 的分词器针对 `smollm-corpus` 训练得到的, 词表大小为 `32768` , 训练脚本可以在 [这里](../../examples/utils/train_tokenizer_from_old.py) 找到.
 
 ```shell
 # 填写数据集路径, 保存路径, 分词器路径, 样本数量, 最大长度和进程数
-python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SamllDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
+python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SmallDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
 ```
 
 > [!NOTE]
@@ -144,7 +144,7 @@ python ./examples/utils/concatenate_pt_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/pt.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/pt.py --config recipes/doge/Doge-20M/config_full.yaml
 ```
 
 > [!NOTE]
@@ -238,7 +238,7 @@ python ./examples/utils/concatenate_ft_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -250,7 +250,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_fil
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/dpo.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/dpo.py --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
 ```
 
 > [!NOTE]
@@ -345,7 +345,7 @@ python ./examples/utils/concatenate_ft_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -357,7 +357,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/sft.py --config_fil
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch ./src/small_doge/grpo.py --config_file recipes/accelerate_configs/single_gpu.yaml --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
 ```
 
 > [!NOTE]

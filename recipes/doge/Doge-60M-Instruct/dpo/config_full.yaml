@@ -5,7 +5,8 @@ logging_steps: 100
 report_to:
 - tensorboard
 - wandb
-save_strategy: "no"
+save_strategy: steps
+save_steps: 100
 output_dir: data/Doge-60M-Instruct-DPO
 overwrite_output_dir: true
 push_to_hub: true
@@ -17,6 +18,7 @@ hub_strategy: every_save
 # Model arguments
 model_name_or_path: SmallDoge/Doge-60M-SFT
 model_revision: main
+trust_remote_code: True
 torch_dtype: bfloat16
 
 # Data training arguments
@@ -37,7 +39,7 @@ eval_strategy: steps
 eval_steps: 100
 per_device_eval_batch_size: 1
 optim: adamw_torch
-learning_rate: 6.0e-4
+learning_rate: 6.0e-5
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1

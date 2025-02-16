@@ -1,16 +1,25 @@
 
-$MODEL = "JingzeShi/Doge-20M"
+$MODEL = "SmallDoge/Doge-160M"
 $OUTPUT_DIR = "./lighteval_results"
 
 if ($MODEL -match "Instruct$") {
     lighteval accelerate "pretrained=$MODEL,max_length=2048,trust_remote_code=True" `
-    "extended|ifeval|5|0" `
+    "evaluation/instruct/doge_instruct.txt" `
     --override-batch-size 1 `
-    --output-dir $OUTPUT_DIR `
-    --use-chat-template
-} else {
+    --use-chat-template `
+    --output-dir $OUTPUT_DIR
+} elseif ($MODEL -match "Reason$") {
+    lighteval vllm "pretrained=$MODEL,max_model_length=32768,gpu_memory_utilisation=0.8,trust_remote_code=True" `
+    "evaluation/reason/doge_reason.txt" `
+    --custom-tasks evaluation/reason/tasks.py `
+    --override-batch-size 1 `
+    --use-chat-template `
+    --output-dir $OUTPUT_DIR
+}
+else {
     lighteval accelerate "pretrained=$MODEL,max_length=2048,trust_remote_code=True" `
-    "original|mmlu|5|0,lighteval|triviaqa|5|0,lighteval|arc:easy|5|0,leaderboard|arc:challenge|5|0,lighteval|piqa|5|0,leaderboard|hellaswag|5|0,lighteval|openbookqa|5|0,leaderboard|winogrande|5|0" `
+    "evaluation/base/doge_base.txt" `
+    --custom-tasks evaluation/base/tasks.py `
     --override-batch-size 1 `
     --output-dir $OUTPUT_DIR
 }

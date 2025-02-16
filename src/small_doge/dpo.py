@@ -15,11 +15,12 @@
 import logging
 import os
 import sys
+import re
 
 import datasets
 import torch
 import transformers
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
@@ -77,7 +78,10 @@ def main(script_args, training_args, model_args):
     ################
     # Load datasets
     ################
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    if re.match(r'^[^/]+/[^/]+$', script_args.dataset_name):
+        dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    else:
+        dataset = load_from_disk(script_args.dataset_name)
 
     ################
     # Load tokenizer
@@ -150,9 +154,6 @@ def main(script_args, training_args, model_args):
 
     # Save everything else on main process
     kwargs = {
-        "finetuned_from": model_args.model_name_or_path,
-        "dataset": list(script_args.dataset_name),
-        "dataset_tags": list(script_args.dataset_name),
         "tags": ["small-doge"],
     }
     if trainer.accelerator.is_main_process:

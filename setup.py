@@ -40,11 +40,8 @@ if stale_egg_info.exists():
 # IMPORTANT: all dependencies should be listed here with their version requirements, if any.
 #   * If a dependency is fast-moving (e.g. transformers), pin to the exact version
 _deps = [
-    "latex2sympy2_extended>=0.9.3",
-    "math_verify>=0.3.3",
     "accelerate>=1.2.1",
     "bitsandbytes>=0.43.0",
-    "ruff>=0.9.0",
     "datasets>=3.2.0",
     "deepspeed==0.15.4",
     "distilabel[vllm,ray,openai]>=1.5.2",
@@ -53,17 +50,21 @@ _deps = [
     "hf_transfer>=0.1.4",
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
-    "lighteval @ git+https://github.com/huggingface/lighteval.git@main",
-    "math-verify>=0.3.3",  # Used for math verification in grpo
+    "latex2sympy2_extended>=1.0.6",
+    "lighteval",
+    "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
+    "peft>=0.14.0",
     "pytest",
+    "ruff>=0.9.0",
     "safetensors>=0.3.3",
     "sentencepiece>=0.1.99",
+    "tensorboard>=2.6.0",
     "torch>=2.5.1",
-    "transformers @ git+https://github.com/LoserCheems/transformers.git@support-constant-lr-with-cooldown",
-    "trl @ git+https://github.com/huggingface/trl.git@main",
-    "vllm>=0.7.0",
+    "transformers",
+    "trl",
+    "vllm>=0.7.1",
     "wandb>=0.19.1",
 ]
 
@@ -81,7 +82,7 @@ def deps_list(*pkgs):
 
 
 extras = {}
-extras["tests"] = deps_list("pytest", "parameterized")
+extras["tests"] = deps_list("pytest", "parameterized", "math-verify")
 extras["torch"] = deps_list("torch")
 extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["eval"] = deps_list("lighteval", "math-verify")
@@ -90,14 +91,14 @@ extras["deepspeed"] = deps_list("deepspeed")
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
-    deps["latex2sympy2_extended"],
-    deps["math_verify"],
     deps["accelerate"],
     deps["bitsandbytes"],
     deps["einops"],
     deps["datasets"],
     deps["hf_transfer"],
     deps["huggingface-hub"],
+    deps["latex2sympy2_extended"],
+    deps["math-verify"],
     deps["packaging"],  # utilities from PyPA to e.g., compare versions
     deps["safetensors"],
     deps["sentencepiece"],
@@ -112,7 +113,7 @@ setup(
     description="A Family of Dynamic Ultra-Fast Small Language Models Ready for Embodied Artificial General Intelligence!",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
-    author="SmallDoge Team",
+    author="The SmallDoge Team",
     author_email="losercheems@gmail.com",
     url="https://github.com/SmallDoges/small-doge",
     package_dir={"": "src"},

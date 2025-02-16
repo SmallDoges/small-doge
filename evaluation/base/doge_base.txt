@@ -1,0 +1,7 @@
+leaderboard|hellaswag|5|0
+custom|arc|5|0
+lighteval|piqa|5|0
+custom|mmlu|5|0
+lighteval|trivia_qa|5|0
+leaderboard|winogrande|5|0
+lighteval|openbook_qa|5|0

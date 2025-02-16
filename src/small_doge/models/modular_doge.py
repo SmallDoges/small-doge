@@ -24,15 +24,28 @@ import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
 from torch import nn
+
+from transformers.models.llama.modeling_llama import (
+    LlamaForSequenceClassification,
+    LlamaRMSNorm,
+    LlamaRotaryEmbedding,
+    apply_rotary_pos_emb,
+    repeat_kv,
+)
+
 from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.configuration_utils import PretrainedConfig
 from transformers.generation import GenerationMixin
-from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
+from transformers.modeling_attn_mask_utils import AttentionMaskConverter
+from transformers.modeling_outputs import (
+    BaseModelOutputWithPast,
+    CausalLMOutputWithPast,
+)
 from transformers.modeling_rope_utils import rope_config_validation
-from transformers.modeling_utils import PreTrainedModel
-from transformers.models.llama.modeling_llama import LlamaForSequenceClassification, LlamaRMSNorm, LlamaRotaryEmbedding
+from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS, PreTrainedModel
 from transformers.processing_utils import Unpack
+from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.utils import (
     LossKwargs,
     add_start_docstrings,
@@ -41,7 +54,6 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from transformers.utils.deprecation import deprecate_kwarg
 
 
 if is_torch_flex_attn_available():
@@ -172,7 +184,7 @@ class DogeConfig(PretrainedConfig):
         "layers.*.self_attn.q_proj": "colwise",
         "layers.*.self_attn.k_proj": "colwise",
         "layers.*.self_attn.v_proj": "colwise",
-        "layers.*.self_attn.dt_proj": "colwise",
+        "layers.*.self_attn.dt_proj": "rowwise",
         "layers.*.self_attn.o_proj": "rowwise",
         "layers.*.mlp.gate_proj": "colwise",
         "layers.*.mlp.up_proj": "colwise",
@@ -253,15 +265,14 @@ class DogeConfig(PretrainedConfig):
         )
 
 
-class RMSNorm(LlamaRMSNorm):
-    def __init__(self, hidden_size, eps=1e-6):
-        """
-        RMSNorm is equivalent to T5LayerNorm
-        """
-        super().__init__(hidden_size, eps)
+class DogeRMSNorm(LlamaRMSNorm):
+    pass
 
 
-class Residual(nn.Module):
+ALL_LAYERNORM_LAYERS.append(DogeRMSNorm)
+
+
+class DogeResidual(nn.Module):
     def __init__(self, hidden_size):
         super().__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
@@ -273,56 +284,151 @@ class Residual(nn.Module):
         return f"{tuple(self.weight.shape)}"
 
 
-class RotaryEmbedding(LlamaRotaryEmbedding):
-    def __init__(self, config: Optional[DogeConfig] = None, device=None):
-        super().__init__(config, device)
+class DogeRotaryEmbedding(LlamaRotaryEmbedding):
+    pass
 
 
-def rotate_half(x):
-    """
-    Rotates half the hidden dims of the input.
-    """
-    x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
-    return torch.cat((-x2, x1), dim=-1)
+def eager_attention_forward(
+    module: nn.Module,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    attention_mask: Optional[torch.Tensor],
+    scaling: float,
+    dropout: float = 0.0,
+    **kwargs,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    key_states = repeat_kv(key, module.num_key_value_groups)
+    value_states = repeat_kv(value, module.num_key_value_groups)
+
+    attn_weights = torch.matmul(query, key_states.transpose(-1, -2)) * scaling
+    if attention_mask is not None:
+        causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+        attn_weights = attn_weights + causal_mask
+
+    attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query.dtype)
+    attn_weights = F.dropout(attn_weights, p=dropout, training=module.training)
+    attn_output = torch.matmul(attn_weights, value_states)
+    attn_output = attn_output.transpose(1, 2).contiguous()
+
+    return attn_output, attn_weights
 
 
-def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
-    """Applies Rotary Position Embedding to the query and key tensors.
+def sdpa_attention_forward(
+    module: nn.Module,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    attention_mask: Optional[torch.Tensor],
+    dropout: float = 0.0,
+    scaling: Optional[float] = None,
+    is_causal: Optional[bool] = None,
+    **kwargs,
+) -> Tuple[torch.Tensor, None]:
+    key = repeat_kv(key, module.num_key_value_groups)
+    value = repeat_kv(value, module.num_key_value_groups)
 
-    Args:
-        q (`torch.Tensor`): The query tensor.
-        k (`torch.Tensor`): The key tensor.
-        cos (`torch.Tensor`): The cosine part of the rotary embedding.
-        sin (`torch.Tensor`): The sine part of the rotary embedding.
-        position_ids (`torch.Tensor`, *optional*):
-            Deprecated and unused.
-        unsqueeze_dim (`int`, *optional*, defaults to 1):
-            The 'unsqueeze_dim' argument specifies the dimension along which to unsqueeze cos[position_ids] and
-            sin[position_ids] so that they can be properly broadcasted to the dimensions of q and k.
-            For example, note that cos[position_ids] and sin[position_ids] have the shape [batch_size, seq_len, head_dim].
-            Then, if q and k have the shape [batch_size, heads, seq_len, head_dim], then setting unsqueeze_dim=1 makes cos[position_ids] and sin[position_ids] broadcastable to the shapes of q and k.
-            Similarly, if q and k have the shape [batch_size, seq_len, heads, head_dim], then set unsqueeze_dim=2.
-    Returns:
-        `tuple(torch.Tensor)` comprising of the query and key tensors rotated using the Rotary Position Embedding.
-    """
-    cos = cos.unsqueeze(unsqueeze_dim)
-    sin = sin.unsqueeze(unsqueeze_dim)
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
-    return q_embed, k_embed
+    causal_mask = attention_mask
+    if attention_mask is not None:
+        causal_mask = causal_mask[:, :, :, : key.shape[-2]]
+
+    # SDPA with memory-efficient backend is bugged with non-contiguous inputs and custom attn_mask for some torch versions
+    # Reference: https://github.com/pytorch/pytorch/issues/112577.
+    query = query.contiguous()
+    key = key.contiguous()
+    value = value.contiguous()
+
+    # We dispatch to SDPA's Flash Attention or Efficient kernels via this `is_causal` if statement instead of an inline conditional assignment
+    # in SDPA to support both torch.compile's dynamic shapes and full graph options. An inline conditional prevents dynamic shapes from compiling.
+    if is_causal is None:
+        is_causal = causal_mask is None and query.shape[2] > 1
+
+    # Shapes (e.g. query.shape[2]) are tensors during jit tracing, resulting in `is_causal` being a tensor.
+    # We convert it to a bool for the SDPA kernel that only accepts bools.
+    if torch.jit.is_tracing() and isinstance(is_causal, torch.Tensor):
+        is_causal = is_causal.item()
+
+    # NOTE: As of pytorch 2.5.1, SDPA backward pass of cuDNN is still incorrect, so we disable cuDNN SDPA (see https://github.com/pytorch/pytorch/issues/138581)
+    torch.backends.cuda.enable_cudnn_sdp(False)
+    attn_output = F.scaled_dot_product_attention(
+        query=query,
+        key=key,
+        value=value,
+        attn_mask=causal_mask,
+        dropout_p=dropout,
+        scale=scaling,
+        is_causal=is_causal,
+    )
+    attn_output = attn_output.transpose(1, 2).contiguous()
+
+    return attn_output, None
 
 
-def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
-    """
-    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep).
-    The hidden states go from (batch, num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
-    """
-    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
-    if n_rep == 1:
-        return hidden_states
-    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
-    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
+def flex_attention_forward(
+    module: nn.Module,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    attention_mask: Optional[torch.Tensor],
+    scaling: Optional[float] = None,
+    is_causal: Optional[bool] = None,
+    softcap: Optional[float] = None,
+    head_mask: Optional[torch.Tensor] = None,
+    **kwargs,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    causal_mask = attention_mask
+    if attention_mask is not None:
+        causal_mask = causal_mask[:, :, :, : key.shape[-2]]
+
+    if is_causal is None:
+        is_causal = causal_mask is None and query.shape[2] > 1
+
+    def causal_mod(score, batch, head, q_idx, kv_idx):
+        if softcap is not None:
+            score = softcap * torch.tanh(score / softcap)
+        if causal_mask is not None:
+            score = score + causal_mask[batch][0][q_idx][kv_idx]
+        if head_mask is not None:
+            score = score + head_mask[batch][head][0][0]
+        return score
+
+    def dynamic_mod(score, batch, head, q_idx, kv_idx):
+        if softcap is not None:
+            score = softcap * torch.tanh(score / softcap)
+        if causal_mask is not None:
+            score = score + causal_mask[batch][head][q_idx][kv_idx]
+        if head_mask is not None:
+            score = score + head_mask[batch][head][0][0]
+        return score
+
+    # TODO: flex_attention: As of pytorch 2.5.1, captured buffers that require grad are not yet supported.
+    # NOTE: So we only use flex_attention in inference mode.
+    mask_mod = causal_mod if is_causal or module.training else dynamic_mod
+
+    attn_output, attention_weights = flex_attention(
+        query=query,
+        key=key,
+        value=value,
+        score_mod=mask_mod,
+        enable_gqa=True,
+        scale=scaling,
+        # Last time checked on PyTorch == 2.5.1: Flex Attention always computes the lse regardless.
+        # For simplification, we thus always return it as no additional computations are introduced.
+        return_lse=True,
+    )
+    # lse is returned in float32
+    attention_weights = attention_weights.to(value.dtype)
+    attn_output = attn_output.transpose(1, 2).contiguous()
+
+    return attn_output, attention_weights
+
+
+ALL_ATTENTION_FUNCTIONS.update(
+    {
+        "sdpa": sdpa_attention_forward,
+        "flex_attention": flex_attention_forward,
+    }
+)
 
 
 class DogeDynamicMaskAttention(nn.Module):
@@ -332,19 +438,12 @@ class DogeDynamicMaskAttention(nn.Module):
         super().__init__()
         self.config = config
         self.layer_idx = layer_idx
-        self.head_dim = config.hidden_size // config.num_attention_heads
+        self.head_dim = getattr(config, "head_dim", config.hidden_size // config.num_attention_heads)
         self.num_key_value_groups = config.num_attention_heads // config.num_key_value_heads
         self.scaling = self.head_dim**-0.5
         self.attention_dropout = config.attention_dropout
         self.dynamic_mask_ratio = config.dynamic_mask_ratio
 
-        self.ALL_ATTENTION_FUNCTIONS = {
-            "eager": self.eager_attention_forward,
-            "flex_attention": self.flex_attention_forward,
-            "sdpa": self.sdpa_attention_forward,
-        }
-
-        # Q K V O projections
         self.q_proj = nn.Linear(
             config.hidden_size, config.num_attention_heads * self.head_dim, bias=config.hidden_bias
         )
@@ -354,7 +453,7 @@ class DogeDynamicMaskAttention(nn.Module):
         self.v_proj = nn.Linear(
             config.hidden_size, config.num_key_value_heads * self.head_dim, bias=config.hidden_bias
         )
-        # dynamic mask for the QK^T attention score matrix
+        # dynamic mask for the QK^T attention weights matrix
         self.A = nn.Parameter(torch.zeros(config.num_attention_heads))
         self.dt_proj = nn.Linear(
             config.num_key_value_heads * self.head_dim, config.num_attention_heads, bias=config.hidden_bias
@@ -371,7 +470,7 @@ class DogeDynamicMaskAttention(nn.Module):
         past_key_value: Optional[Cache] = None,
         cache_position: Optional[torch.LongTensor] = None,
         **kwargs,
-    ) -> Tuple[torch.Tensor, Optional[Cache]]:
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         input_shape = hidden_states.shape[:-1]
         hidden_shape = (*input_shape, -1, self.head_dim)
 
@@ -399,11 +498,18 @@ class DogeDynamicMaskAttention(nn.Module):
             attention_mask=attention_mask,
         )
 
-        attention_interface: Callable = self.eager_attention_forward
+        attention_interface: Callable = eager_attention_forward
         if self.config._attn_implementation != "eager":
-            attention_interface = self.ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
+            if self.config._attn_implementation == "sdpa" and kwargs.get("output_attentions", False):
+                logger.warning_once(
+                    "`torch.nn.functional.scaled_dot_product_attention` does not support `output_attentions=True`. Falling back to "
+                    'eager attention. This warning can be removed using the argument `attn_implementation="eager"` when loading the model.'
+                )
+            else:
+                attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
 
-        attn_output = attention_interface(
+        attn_output, attn_weights = attention_interface(
+            self,
             query_states,
             key_states,
             value_states,
@@ -415,7 +521,7 @@ class DogeDynamicMaskAttention(nn.Module):
 
         attn_output = attn_output.reshape(*input_shape, -1).contiguous()
         attn_output = self.o_proj(attn_output)
-        return attn_output
+        return attn_output, attn_weights
 
     def prepare_dynamic_mask(
         self,
@@ -448,109 +554,6 @@ class DogeDynamicMaskAttention(nn.Module):
             attn_mask = attention_mask
 
         return attn_mask
-
-    def eager_attention_forward(
-        self,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
-        attention_mask: Optional[torch.Tensor],
-        scaling: float,
-        dropout: float = 0.0,
-        **kwargs,
-    ) -> torch.Tensor:
-        key_states = repeat_kv(key, self.num_key_value_groups)
-        value_states = repeat_kv(value, self.num_key_value_groups)
-
-        # compute attention scores matrix
-        attn_weights = torch.matmul(query, key_states.transpose(-1, -2)) * scaling
-        if attention_mask is not None:
-            causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-            attn_weights = attn_weights + causal_mask
-
-        # upcast attention scores to fp32
-        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query.dtype)
-        attn_weights = F.dropout(attn_weights, p=dropout, training=self.training)
-
-        # apply attention scores to value states
-        attn_output = torch.matmul(attn_weights, value_states)
-        attn_output = attn_output.transpose(1, 2).contiguous()
-        return attn_output
-
-    def sdpa_attention_forward(
-        self,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
-        attention_mask: Optional[torch.Tensor],
-        scaling: float,
-        dropout: float = 0.0,
-        **kwargs,
-    ) -> torch.Tensor:
-        key = repeat_kv(key, self.num_key_value_groups)
-        value = repeat_kv(value, self.num_key_value_groups)
-
-        causal_mask = attention_mask
-        if attention_mask is not None:
-            causal_mask = causal_mask[:, :, :, : key.shape[-2]]
-
-        # SDPA with memory-efficient backend is bugged with non-contiguous inputs and custom attn_mask for some torch versions
-        # Reference: https://github.com/pytorch/pytorch/issues/112577.
-        query = query.contiguous()
-        key = key.contiguous()
-        value = value.contiguous()
-
-        # NOTE: As of pytorch 2.5.1, cuDNN's SDPA backward pass is still incorrect, so we disable cuDNN SDPA (see https://github.com/pytorch/pytorch/issues/138581)
-        torch.backends.cuda.enable_cudnn_sdp(False)
-        attn_output = F.scaled_dot_product_attention(
-            query,
-            key,
-            value,
-            attn_mask=causal_mask,
-            dropout_p=dropout,
-            scale=scaling,
-        )
-        attn_output = attn_output.transpose(1, 2).contiguous()
-        return attn_output
-
-    def flex_attention_forward(
-        self,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
-        attention_mask: Optional[torch.Tensor],
-        scaling: float,
-        dropout: float = 0.0,
-        **kwargs,
-    ) -> torch.Tensor:
-        key = repeat_kv(key, self.num_key_value_groups)
-        value = repeat_kv(value, self.num_key_value_groups)
-
-        causal_mask = attention_mask
-        if attention_mask is not None:
-            causal_mask = causal_mask[:, :, :, : key.shape[-2]]
-
-        # TODO: flex_attention: As of pytorch 2.5.1, captured buffers that require grad are not yet supported.
-        # NOTE: So we only use flex_attention in inference mode.
-        def causal_mod(score, batch, head, q_idx, kv_idx):
-            score = score + causal_mask[batch][0][q_idx][kv_idx]
-            return score
-
-        def dynamic_mod(score, batch, head, q_idx, kv_idx):
-            score = score + causal_mask[batch][head][q_idx][kv_idx]
-            return score
-
-        mask_mod = causal_mod if self.is_causal else dynamic_mod
-
-        attn_output = flex_attention(
-            query,
-            key,
-            value,
-            score_mod=mask_mod,
-            scale=scaling,
-        )
-        attn_output = attn_output.transpose(1, 2).contiguous()
-        return attn_output
 
 
 class DogeMLP(nn.Module):
@@ -588,8 +591,8 @@ class DogeCDMoE(DogeMLP):
         self.num_keys = int(math.sqrt(self.num_cdmoe_experts))
 
         # queries and keys for retrieval experts
-        self.queries = nn.Linear(self.hidden_dim, self.num_cdmoe_heads * self.expert_retrieval_dim, bias=False)
-        self.keys = nn.Parameter(torch.zeros(self.num_cdmoe_heads, self.num_keys, 2, self.expert_retrieval_dim // 2))
+        self.queries_proj = nn.Linear(self.hidden_dim, self.num_cdmoe_heads * self.expert_retrieval_dim, bias=False)
+        self.keys = nn.Parameter(torch.zeros(self.num_cdmoe_heads, self.expert_retrieval_dim, self.num_keys))
 
         # experts
         self.down_embed = nn.Embedding(self.num_cdmoe_experts, self.hidden_dim)
@@ -602,13 +605,15 @@ class DogeCDMoE(DogeMLP):
     ) -> torch.Tensor:
         bsz, seq_len, _ = hidden_states.shape
 
-        # get similarity with queries and keys
-        queries = self.queries(hidden_states)
-        queries = queries.view(bsz, seq_len, 2, self.num_cdmoe_heads, -1).permute(2, 0, 1, 3, 4)
-        sim = torch.einsum("p b t h n, h k p n -> p b t h k", queries, self.keys)
+        # get routing weights with queries and keys
+        queries = self.queries_proj(hidden_states)
+        queries = queries.view(2, self.num_cdmoe_heads, bsz * seq_len, -1)
+        keys = self.keys.view(2, self.num_cdmoe_heads, -1, self.num_keys)
+        routing_weights = torch.matmul(queries, keys)
+        routing_weights = routing_weights.transpose(-2, -3).view(2, bsz, seq_len, self.num_cdmoe_heads, self.num_keys)
 
-        # get experts with the highest similarity
-        (scores_x, scores_y), (indices_x, indices_y) = sim.topk(self.num_cdmoe_experts_per_head, dim=-1)
+        # get experts with the highest routing weights
+        (scores_x, scores_y), (indices_x, indices_y) = routing_weights.topk(self.num_cdmoe_experts_per_head, dim=-1)
         all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
         all_scores = all_scores.view(*scores_x.shape[:-1], -1)
         all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
@@ -619,9 +624,9 @@ class DogeCDMoE(DogeMLP):
         up_embed = self.up_embed(indices)
 
         # mix experts states with cross domain states
-        experts_weights = torch.einsum("b t d, b t h k d -> b t h k", hidden_states, down_embed)
+        experts_weights = torch.sum(hidden_states[:, :, None, None, :] * down_embed, dim=-1)
         experts_weights = self.act_fn(experts_weights) * scores.softmax(dim=-1)
-        experts_states = torch.einsum("b t h k, b t h k d -> b t d", experts_weights, up_embed)
+        experts_states = torch.sum(experts_weights[:, :, :, :, None] * up_embed, dim=(-2, -3))
         hidden_states = self.down_proj(self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states))
         hidden_states = hidden_states + experts_states
         return hidden_states
@@ -632,13 +637,13 @@ class DogeDecoderLayer(nn.Module):
         super().__init__()
         self.hidden_dropout = config.hidden_dropout
 
-        self.pre_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.pre_layernorm = DogeRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.self_attn = DogeDynamicMaskAttention(config=config, layer_idx=layer_idx)
-        self.pre_residual = Residual(config.hidden_size)
+        self.pre_residual = DogeResidual(config.hidden_size)
 
-        self.post_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_layernorm = DogeRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.feed_forward = DogeMLP(config) if not config.is_moe else DogeCDMoE(config)
-        self.post_residual = Residual(config.hidden_size)
+        self.post_residual = DogeResidual(config.hidden_size)
 
     def forward(
         self,
@@ -655,11 +660,13 @@ class DogeDecoderLayer(nn.Module):
         # sequence transformation
         residual = hidden_states
         hidden_states = self.pre_layernorm(hidden_states)
-        hidden_states = self.self_attn(
+        hidden_states, self_attn_weights = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_value=past_key_value,
+            output_attentions=output_attentions,
+            use_cache=use_cache,
             cache_position=cache_position,
             position_embeddings=position_embeddings,
             **kwargs,
@@ -821,11 +828,11 @@ class DogeModel(DogePreTrainedModel):
         self.vocab_size = config.vocab_size
 
         self.word_embed = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
-        self.rotary_emb = RotaryEmbedding(config)
+        self.rotary_emb = DogeRotaryEmbedding(config)
         self.layers = nn.ModuleList(
             [DogeDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)]
         )
-        self.final_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.final_layernorm = DogeRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.gradient_checkpointing = False
 
         # Initialize weights and apply final processing
@@ -952,8 +959,26 @@ class DogeModel(DogePreTrainedModel):
         past_key_values: Cache,
         output_attentions: bool,
     ):
+        if self.config._attn_implementation == "flash_attention_2":
+            if attention_mask is not None and (attention_mask == 0.0).any():
+                return attention_mask
+            return None
+
+        # For SDPA, when possible, we will rely on its `is_causal` argument instead of its `attn_mask` argument, in
+        # order to dispatch on Flash Attention 2. This feature is not compatible with static cache, as SDPA will fail
+        # to infer the attention mask.
         past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
         using_static_cache = isinstance(past_key_values, StaticCache)
+
+        # When output attentions is True, sdpa implementation's forward method calls the eager implementation's forward
+        if self.config._attn_implementation == "sdpa" and not using_static_cache and not output_attentions:
+            if AttentionMaskConverter._ignore_causal_mask_sdpa(
+                attention_mask,
+                inputs_embeds=input_tensor,
+                past_key_values_length=past_seen_tokens,
+                is_training=self.training,
+            ):
+                return None
 
         dtype, device = input_tensor.dtype, input_tensor.device
         sequence_length = input_tensor.shape[1]
@@ -966,9 +991,9 @@ class DogeModel(DogePreTrainedModel):
                 else past_seen_tokens + sequence_length + 1
             )
 
-        # in case the provided `attention` mask is 2D, we generate a causal mask here (4D).
+        # In case the provided `attention` mask is 2D, we generate a causal mask here (4D).
         causal_mask = self._prepare_4d_causal_attention_mask_with_cache_position(
-            attention_mask=attention_mask,
+            attention_mask,
             sequence_length=sequence_length,
             target_length=target_length,
             dtype=dtype,
@@ -977,17 +1002,29 @@ class DogeModel(DogePreTrainedModel):
             batch_size=input_tensor.shape[0],
         )
 
+        if (
+            self.config._attn_implementation == "sdpa"
+            and attention_mask is not None
+            and attention_mask.device.type in ["cuda", "xpu"]
+            and not output_attentions
+        ):
+            # Attend to all tokens in fully masked rows in the causal_mask, for example the relevant first rows when
+            # using left padding. This is required by F.scaled_dot_product_attention memory-efficient attention path.
+            # Details: https://github.com/pytorch/pytorch/issues/110213
+            min_dtype = torch.finfo(dtype).min
+            causal_mask = AttentionMaskConverter._unmask_unattended(causal_mask, min_dtype)
+
         return causal_mask
 
     @staticmethod
     def _prepare_4d_causal_attention_mask_with_cache_position(
-        attention_mask: torch.Tensor = None,
-        sequence_length: int = None,
-        target_length: int = None,
-        dtype: torch.dtype = None,
-        device: torch.device = None,
-        cache_position: torch.Tensor = None,
-        batch_size: int = None,
+        attention_mask: torch.Tensor,
+        sequence_length: int,
+        target_length: int,
+        dtype: torch.dtype,
+        device: torch.device,
+        cache_position: torch.Tensor,
+        batch_size: int,
         **kwargs,
     ):
         """
@@ -1018,10 +1055,7 @@ class DogeModel(DogePreTrainedModel):
         else:
             min_dtype = torch.finfo(dtype).min
             causal_mask = torch.full(
-                (sequence_length, target_length),
-                fill_value=min_dtype,
-                dtype=dtype,
-                device=device,
+                (sequence_length, target_length), fill_value=min_dtype, dtype=dtype, device=device
             )
             if sequence_length != 1:
                 causal_mask = torch.triu(causal_mask, diagonal=1)
@@ -1037,9 +1071,6 @@ class DogeModel(DogePreTrainedModel):
                 )
 
         return causal_mask
-
-
-class KwargsForCausalLM(LossKwargs): ...
 
 
 class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
@@ -1074,7 +1105,6 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
     def set_decoder(self, decoder):
         self.model = decoder
 
-    @deprecate_kwarg("num_logits_to_keep", version="4.50", new_name="logits_to_keep")
     @add_start_docstrings_to_model_forward(DOGE_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
     def forward(
@@ -1090,8 +1120,8 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
-        logits_to_keep: int = 0,
-        **kwargs: Unpack[KwargsForCausalLM],
+        logits_to_keep: Union[int, torch.Tensor] = 0,
+        **kwargs: Unpack[LossKwargs],
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
