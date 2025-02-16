@@ -145,7 +145,7 @@ Here are the initial learning rates required to continue training at each checkp
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 24k  | 2048 | 32B | 4e-3 | 1.5M | bfloat16 | 522 |
 
 **Evaluation**:
-| Model | MMLU | TriviaQA | ARC | PIQA | HellaSwag | OBQA | Winogrande | tokens / s on CPU |
+| Model | MMLU | TriviaQA | ARC | PIQA | HellaSwag | OBQA | Winogrande | tokens / s on i7-11 CPU |
 |---|---|---|---|---|---|---|---|---|
 | [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | 25.4 | 0.03 | 29.8 | 58.4 | 27.3 | 25.6 | 50.2 | 142 |
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.4 | 0.2 | 37.9 | 61.4 | 31.5 | 28.0 | 50.8 | 62 |
