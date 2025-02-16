@@ -48,13 +48,13 @@ This project aims to develop a series of dynamic and fast small models to promot
 | Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
 |---|---|---|---|---|---|---|---|---|---|
 | Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-| Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 | |
+| Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
+| Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 
-> The following two models are currently in pre-training, and researchers with the capability are welcome to help(poor man's cry)!🙏
+> The following one model are currently in pre-training, and researchers with the capability are welcome to help(poor man's cry)!🙏
 
 | Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
 |---|---|---|---|---|---|---|---|---|---|
-| Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 | Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 
 <div align="center">
@@ -135,21 +135,25 @@ Here are the initial learning rates required to continue training at each checkp
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint) | 4e-3 | wsd_scheduler | 2400 | 19200 |
 | Doge-320M | 2e-3 | wsd_scheduler | 3200 | 25600 ||
 
-### Doge-SLM
+### Doge-Base
 
 **Pre-Training**:
-| Model | Training Data | Steps | Content Length | Tokens | LR | Batch Size | Precision |
-|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 |
-| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 |
+| Model | Training Data | Steps | Content Length | Tokens | LR | Batch Size | Precision | RTX 4090 GPU hours |
+|---|---|---|---|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 | 14 |
+| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 | 128 |
+| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 24k  | 2048 | 32B | 4e-3 | 1.5M | bfloat16 | 522 |
 
 **Evaluation**:
-| Model | MMLU | TriviaQA | ARC-E | ARC-C | PIQA | HellaSwag | OBQA | Winogrande | tokens / s on CPU |
-|---|---|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | 25.43 | 0.03 | 36.83 | 22.78 | 58.38 | 27.25 | 25.60 | 50.20 | 142 |
-| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.41 | 0.18 | 50.46 | 25.34 | 61.43 | 31.45 | 28.00 | 50.75 | 62 |
+| Model | MMLU | TriviaQA | ARC | PIQA | HellaSwag | OBQA | Winogrande | tokens / s on CPU |
+|---|---|---|---|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | 25.4 | 0.03 | 29.8 | 58.4 | 27.3 | 25.6 | 50.2 | 142 |
+| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.4 | 0.2 | 37.9 | 61.4 | 31.5 | 28.0 | 50.8 | 62 |
+| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | 29.2 | 4.8 | 44.4 | 66.3 | 38.7 | 34.4 | 52.2 | 28 |
 
 > All evaluations are done using five-shot settings, without additional training on the benchmarks.
+
+### Doge-Instruct
 
 **SFT**:
 | Model | Training Data | Epochs | Content Length | LR | Batch Size | Precision |

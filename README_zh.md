@@ -48,12 +48,12 @@
 |---|---|---|---|---|---|---|---|---|---|
 | Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 | Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
+| Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 
-> 以下两个型号正在预训练, 欢迎有能力的研究员帮忙(poor man的哀嚎)!🙏
+> 以下一个型号正在预训练, 欢迎有能力的研究员帮忙(poor man的哀嚎)!🙏
 
 | Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
 |---|---|---|---|---|---|---|---|---|---|
-| Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 | Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 
 <div align="center">
@@ -134,21 +134,25 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint) | 4e-3 | wsd_scheduler | 2400 | 19200 |
 | Doge-320M | 2e-3 | wsd_scheduler | 3200 | 25600 |
 
-### Doge-SLM
+### Doge-Base
 
 **预训练**:
-| 模型 | 训练数据 | 步数 | 上下文长度 | 令牌 | 学习率 | 批量大小 | 精度 |
-|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 |
-| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 |
+| 模型 | 训练数据 | 步数 | 上下文长度 | 令牌 | 学习率 | 批量大小 | 精度 | RTX 4090 GPU 小时 |
+|---|---|---|---|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 | 14 |
+| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 | 128 |
+| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 24k  | 2048 | 32B | 4e-3 | 1.5M | bfloat16 | 522 |
 
 **评估**:
-| 模型 | MMLU | TriviaQA | ARC-E | ARC-C | PIQA | HellaSwag | OBQA | Winogrande | CPU 上的 tokens / s |
-|---|---|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | 25.43 | 0.03 | 36.83 | 22.78 | 58.38 | 27.25 | 25.60 | 50.20 | 142 |
-| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.41 | 0.18 | 50.46 | 25.34 | 61.43 | 31.45 | 28.00 | 50.75 | 62 |
+| 模型 | MMLU | TriviaQA | ARC | PIQA | HellaSwag | OBQA | Winogrande | CPU上的tokens/s |
+|---|---|---|---|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | 25.4 | 0.03 | 29.8 | 58.4 | 27.3 | 25.6 | 50.2 | 142 |
+| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.4 | 0.2 | 37.9 | 61.4 | 31.5 | 28.0 | 50.8 | 62 |
+| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | 29.2 | 4.8 | 44.4 | 66.3 | 38.7 | 34.4 | 52.2 | 28 |
 
 > 所有评估都是在five-shot设置下完成的, 在基准测试中没有额外的训练.
+
+### Doge-Instruct
 
 **监督微调**:
 | 模型 | 训练数据 | 轮次 | 上下文长度 | 学习率 | 批量大小 | 精度 |

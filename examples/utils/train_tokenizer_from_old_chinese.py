@@ -1,6 +1,5 @@
 '''
 dataset resouces: http://share.mobvoi.com:5000/sharing/O91blwPkY
-
 Download and unzip the file directly to the ./dataset directory
 
 - dataset
