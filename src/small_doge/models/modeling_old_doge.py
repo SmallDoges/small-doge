@@ -376,6 +376,9 @@ class DogeDynamicMaskAttention(nn.Module):
         dropout: float = 0.0,
         **kwargs,
     ) -> torch.Tensor:
+        key = repeat_kv(key, self.num_key_value_groups)
+        value = repeat_kv(value, self.num_key_value_groups)
+
         causal_mask = attention_mask
         if attention_mask is not None:
             causal_mask = causal_mask[:, :, :, : key.shape[-2]]
@@ -395,7 +398,6 @@ class DogeDynamicMaskAttention(nn.Module):
             attn_mask=causal_mask,
             dropout_p=dropout,
             scale=scaling,
-            enable_gqa=True,
         )
         attn_output = attn_output.transpose(1, 2).contiguous()
         return attn_output
