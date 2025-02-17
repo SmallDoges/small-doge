@@ -51,6 +51,7 @@ _deps = [
     "huggingface-hub[cli]>=0.19.2,<1.0",
     "isort>=5.12.0",
     "latex2sympy2_extended>=1.0.6",
+    "liger_kernel==0.5.3",
     "lighteval",
     "math-verify==0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
@@ -62,7 +63,7 @@ _deps = [
     "sentencepiece>=0.1.99",
     "tensorboard>=2.6.0",
     "torch>=2.5.1",
-    "transformers",
+    "transformers @ git+https://github.com/LoserCheems/transformers.git@add-doge-model",
     "trl",
     "vllm>=0.7.1",
     "wandb>=0.19.1",
