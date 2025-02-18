@@ -26,7 +26,7 @@ dataset_name: ./datasets/grpo_dataset
 dataset_configs:
 - all
 # If you are using vllm, please comment out preprocessing_num_workers and use num_processes
-preprocessing_num_workers: 8
+preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
 # Num processes is less by 1 as vLLM is using 1 GPU
 # num_processes: 7
 max_prompt_length: 512
