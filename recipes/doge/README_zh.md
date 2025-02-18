@@ -205,7 +205,7 @@ bash ./evaluation/eval_downstream_tasks.sh
 
 ```shell
 # 填写保存路径, 缓存路径和进程数
-python ./examples/utils/download_ft_dataset.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
+python ./examples/utils/download_ft_datasets.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
 ```
 
 > [!TIP]

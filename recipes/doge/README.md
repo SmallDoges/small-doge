@@ -205,7 +205,7 @@ For the fine-tuning dataset, we selected the `smoltalk` dataset for SFT and the 
 
 ```shell
 # Fill in the save path, cache path, and number of processes
-python ./examples/utils/download_ft_dataset.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
+python ./examples/utils/download_ft_datasets.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
 ```
 
 > [!TIP]
