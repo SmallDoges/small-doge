@@ -37,14 +37,7 @@ def concatenate_distill_datasets(datasets_dir, save_dir, num_proc):
     train_dataset : Dataset = concatenate_datasets([
         open_thoughts_dataset['train'],
     ])
-    test_dataset : Dataset = concatenate_datasets([
-        open_thoughts_dataset['test'],
-    ])
-    dataset = DatasetDict({
-        'train': train_dataset,
-        'test': test_dataset
-    })
-    dataset = dataset.shuffle(seed=233)
+    dataset = train_dataset.train_test_split(test_size=1_000, shuffle=True, seed=233)
     dataset.save_to_disk(save_dir + "/distill_dataset", num_proc=num_proc, num_shards={'train': 16, 'test': 1 })
 
 def concatenate_grpo_datasets(datasets_dir, save_dir, num_proc):
@@ -52,14 +45,7 @@ def concatenate_grpo_datasets(datasets_dir, save_dir, num_proc):
     train_dataset : Dataset = concatenate_datasets([
         openr1_math_dataset['train'],
     ])
-    test_dataset : Dataset = concatenate_datasets([
-        openr1_math_dataset['test'],
-    ])
-    dataset = DatasetDict({
-        'train': train_dataset,
-        'test': test_dataset
-    })
-    dataset = dataset.shuffle(seed=233)
+    dataset = train_dataset.train_test_split(test_size=1_000, shuffle=True, seed=233)
     dataset.save_to_disk(save_dir + "/grpo_dataset", num_proc=num_proc, num_shards={'train': 16, 'test': 1 })
 
 
