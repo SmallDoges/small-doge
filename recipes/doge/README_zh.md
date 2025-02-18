@@ -8,7 +8,7 @@
 </h4>
 </div>
 
-*我们在本指南中提供了训练Doge的详细步骤, 包括预训练的Doge-Base, 指令微调的Doge-Instruct, 以及推理微调的Doge-R1.*
+*我们在本指南中提供了训练Doge的详细步骤, 包括预训练的Doge-Base, 指令微调的Doge-Instruct, 以及推理微调的Doge-Reason.*
 
 **目录**
 1. [安装](#1-安装)
@@ -28,7 +28,7 @@
     - [监督微调模型](#34-监督微调模型)
     - [直接偏好优化模型](#35-直接偏好优化模型)
     - [使用](#36-使用)
-4. [推理微调R1模型](#4-推理微调R1模型)
+4. [推理微调Reason模型](#4-推理微调Reason模型)
     - [下载数据集](#41-下载数据集)
     - [预处理数据集](#42-预处理数据集)
     - [合并数据集](#43-合并数据集)
@@ -295,17 +295,17 @@ outputs = model.generate(
 )
 ```
 
-## 4. 推理微调R1模型
+## 4. 推理微调Reason模型
 
 目前可以进行推理微调的教师模型蒸馏数据仍然比较稀少, 这里我们提供huggingface的[open-r1](https://github.com/huggingface/open-r1/?tab=readme-ov-file#data-generation)项目链接, 如果您有需要的话, 可以自行根据指南使用OpenAI的o1或DeepSeek的R1模型来生成教师模型数据.
 
 ### 4.1 下载数据集
 
-微调数据集, 我们选取了 `Bespoke-Stratos-17k` 数据集, 来进行蒸馏微调, `NuminaMath-TIR` 数据集, 来进行群体相对优化.
+微调数据集, 我们选取了 `OpenThoughts-114k` 数据集, 来进行蒸馏微调, `OpenR1-Math-220k` 数据集, 来进行群体相对优化.
 
 ```shell
 # 填写保存路径, 缓存路径和进程数
-python ./examples/utils/download_ft_dataset.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
+python ./examples/utils/download_ft_datasets.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
 ```
 
 > [!NOTE]
@@ -345,7 +345,7 @@ python ./examples/utils/concatenate_ft_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Reason/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -357,7 +357,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-Reason/grpo/config_full.yaml
 ```
 
 > [!NOTE]
@@ -370,8 +370,8 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
 ```python
 from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig, TextStreamer
 
-tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-20M-R1")
-model = AutoModelForCausalLM.from_pretrained("SmallDoge/Doge-20M-R1", trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-20M-Reason")
+model = AutoModelForCausalLM.from_pretrained("SmallDoge/Doge-20M-Reason", trust_remote_code=True)
 
 generation_config = GenerationConfig(
       max_new_tokens=1000, 

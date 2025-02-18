@@ -8,7 +8,7 @@ English | [简体中文](https://github.com/SmallDoges/small-doge/blob/main/reci
 </h4>
 </div>
 
-*We provide detailed steps to train Doge in this guide, including pre-training Doge-Base, instruction fine-tuning Doge-Instruct, and reasoning fine-tuning Doge-R1.*
+*We provide detailed steps to train Doge in this guide, including pre-training Doge-Base, instruction fine-tuning Doge-Instruct, and reasoning fine-tuning Doge-Reason.*
 
 **Table of Contents**
 1. [Installation](#1-installation)
@@ -28,7 +28,7 @@ English | [简体中文](https://github.com/SmallDoges/small-doge/blob/main/reci
     - [Supervised Fine-tuning the model](#34-supervised-fine-tuning-the-model)
     - [Direct Preference Optimization the model](#35-direct-preference-optimization-the-model)
     - [Usage](#36-usage)
-4. [Reasoning Fine-tuning R1 model](#4-reasoning-fine-tuning-r1-model)
+4. [Reasoning Fine-tuning Reason model](#4-reasoning-fine-tuning-reason-model)
     - [Download the dataset](#41-download-the-dataset)
     - [Preprocess the dataset](#42-preprocess-the-dataset)
     - [Concatenate the dataset](#43-concatenate-the-dataset)
@@ -296,17 +296,17 @@ outputs = model.generate(
 ```
 
 
-## 4. Reasoning Fine-tuning R1 model
+## 4. Reasoning Fine-tuning Reason model
 
 Currently, the data for reasoning fine-tuning the teacher model is still relatively scarce. Here we provide the huggingface [open-r1](https://github.com/huggingface/open-r1/?tab=readme-ov-file#data-generation) project link. If you need it, you can use OpenAI's o1 or DeepSeek's R1 model to generate teacher model data according to the guide.
 
 ### 4.1 Download the dataset
 
-For the fine-tuning dataset, we selected the `Bespoke-Stratos-17k` dataset for DFT and the `NuminaMath-TIR` dataset for GRPO.
+For the fine-tuning dataset, we selected the `OpenThoughts-114k` dataset for DFT and the `OpenR1-Math-220k` dataset for GRPO.
 
 ```shell
 # Fill in the save path, cache path, and number of processes
-python ./examples/utils/download_ft_dataset.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
+python ./examples/utils/download_ft_datasets.py --save_dir ./datasets --cache_dir ./cache --num_proc 1
 ```
 
 > [!NOTE]
@@ -346,7 +346,7 @@ We first DFT the model to learn powerful thinking and reasoning capabilities fro
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-R1/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Reason/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -358,7 +358,7 @@ Then we use the GRPO algorithm to reinforce the model after DFT to make the mode
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-R1/grpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-Reason/grpo/config_full.yaml
 ```
 
 > [!NOTE]
@@ -371,8 +371,8 @@ After fine-tuning is complete, we can use `AutoModelForCausalLM` of `Transformer
 ```python
 from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig, TextStreamer
 
-tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-20M-R1")
-model = AutoModelForCausalLM.from_pretrained("SmallDoge/Doge-20M-R1", trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-20M-Reason")
+model = AutoModelForCausalLM.from_pretrained("SmallDoge/Doge-20M-Reason", trust_remote_code=True)
 
 generation_config = GenerationConfig(
       max_new_tokens=1000, 
