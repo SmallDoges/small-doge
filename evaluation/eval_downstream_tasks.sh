@@ -6,6 +6,7 @@ OUTPUT_DIR="./lighteval_results"
 if [[ $MODEL =~ Instruct$ ]]; then
     lighteval accelerate "pretrained=$MODEL,max_length=2048,trust_remote_code=True" \
     "evaluation/instruct/doge_instruct.txt" \
+    --custom-tasks evaluation/instruct/tasks.py \
     --override-batch-size 1 \
     --use-chat-template \
     --output-dir $OUTPUT_DIR
