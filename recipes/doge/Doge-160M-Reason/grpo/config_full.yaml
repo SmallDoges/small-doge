@@ -16,7 +16,7 @@ hub_model_id: Doge-160M-GRPO
 hub_strategy: every_save
 
 # Model arguments
-model_name_or_path: <your-hub-id>/Doge-160M-Distill
+model_name_or_path: SmallDoge/Doge-160M-Distill
 model_revision: main
 trust_remote_code: True
 torch_dtype: bfloat16
@@ -38,10 +38,16 @@ seed: 233
 use_vllm: false
 vllm_device: auto
 vllm_gpu_memory_utilization: 0.7
+reward_funcs:
+- accuracy
+- format
+reward_weights:
+- 1.0
+- 1.0
 do_train: true
 max_steps: -1
 num_train_epochs: 1
-num_generations: 8 # Be consistent with preprocessing_num_workers or num_processes
+num_generations: 1 # Be consistent with preprocessing_num_workers or num_processes
 per_device_train_batch_size: 1
 do_eval: true
 eval_strategy: steps
