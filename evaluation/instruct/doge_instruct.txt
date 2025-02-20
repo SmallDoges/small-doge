@@ -1,7 +1,7 @@
-extended|ifeval|0|0
-extended|mt_bench|0|0
-leaderboard|hellaswag|0|0
-custom|arc|0|0
-lighteval|piqa|0|0
-custom|mmlu|0|0
-custom|bbh|3|0
+extended|ifeval|5|0
+extended|mt_bench|5|0
+custom|hellaswag|5|0
+custom|arc|5|0
+custom|piqa|5|0
+custom|mmlu|5|0
+custom|bbh|5|0

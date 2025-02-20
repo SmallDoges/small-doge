@@ -7,14 +7,12 @@ if ($MODEL -match "Instruct$") {
     "evaluation/instruct/doge_instruct.txt" `
     --custom-tasks evaluation/instruct/tasks.py `
     --override-batch-size 1 `
-    --use-chat-template `
     --output-dir $OUTPUT_DIR
 } elseif ($MODEL -match "Reason$") {
     lighteval vllm "pretrained=$MODEL,max_model_length=32768,gpu_memory_utilisation=0.8,trust_remote_code=True" `
     "evaluation/reason/doge_reason.txt" `
     --custom-tasks evaluation/reason/tasks.py `
     --override-batch-size 1 `
-    --use-chat-template `
     --output-dir $OUTPUT_DIR
 }
 else {
