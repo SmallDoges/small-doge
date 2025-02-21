@@ -42,9 +42,9 @@
 本项目旨在开发一系列动态快速的小型模型, 以促进其在具身智能领域的应用, 特别是在资源受限的环境下, 满足实时响应需求, 推动下游领域的实际应用落地.
 
 > [!TIP]
-> *截至2025-2-2*: small doge系列已完成了2个型号模型的预训练, 最小仅需20M, 即可具备流畅的对话能力!
+> *截至2025-2-20*: small doge系列已完成了3个型号模型的预训练, 最小仅需20M, 即可具备流畅的对话能力!
 
-| Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
+| 模型 | 代币 | 训练步数 | 批次 | 学习率 | 调度器 | 预热比例 | 衰减比例 | 权重衰减 | 最小学习率 |
 |---|---|---|---|---|---|---|---|---|---|
 | Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 | Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
@@ -52,7 +52,7 @@
 
 > 以下一个型号正在预训练, 欢迎有能力的研究员帮忙(poor man的哀嚎)!🙏
 
-| Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
+| 模型 | 代币 | 训练步数 | 批次 | 学习率 | 调度器 | 预热比例 | 衰减比例 | 权重衰减 | 最小学习率 |
 |---|---|---|---|---|---|---|---|---|---|
 | Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 
@@ -75,7 +75,7 @@
 
 ## 安装要求
 
-我们的代码库需要以下环境:
+如果您需要预训练或者微调, 我们的代码库需要以下环境:
 
 - Windows 或 Linux
 - NVIDIA GPU
@@ -128,7 +128,7 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 - **Doge-320M**: 2e-3
 
 | 模型 | 学习率 | 调度器 | 预热步数 | 稳定步数 |
-|-------|---------------|----------|--------------|--------------|
+|---|---|---|---|---|
 | [Doge-20M]((https://huggingface.co/SmallDoge/Doge-20M-checkpoint)) | 8e-3 | wsd_scheduler | 800 | 6400 |
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M-checkpoint) | 6e-3 | wsd_scheduler | 1600 | 12800 |
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint) | 4e-3 | wsd_scheduler | 2400 | 19200 |
@@ -150,7 +150,6 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.4 | 0.2 | 37.9 | 61.4 | 31.5 | 28.0 | 50.8 | 62 |
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | 29.2 | 4.8 | 44.4 | 66.3 | 38.7 | 34.4 | 52.2 | 28 |
 
-> 所有评估都是在five-shot设置下完成的, 在基准测试中没有额外的训练.
 
 ### Doge-Instruct
 
@@ -166,7 +165,15 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 | [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
 | [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
 
-**环境**:
+**评估**:
+| 模型 | IFEval (Prompt Strict Acc) | MMLU | BBH | ARC | PIQA | HellaSwag | tokens / s on i7-11 CPU |
+|---|---|---|---|---|---|---|---|
+| [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | 7.3 | 26.3 | 18.3 | 29.2 | 57.8 | 27.8 | 142 |
+| [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | 7.4 | 27.5 | 27.7 | 37.5 | 61.4 | 32.1 | 62 |
+| [Doge-160M-Instruct](https://huggingface.co/SmallDoge/Doge-160M-Instruct) | 16.8 | 29.7 | 29.1 | 42.8 | 64.1 | 37.1 | 28 |
+
+
+**训练环境**:
 
 - 镜像: nvcr.io/nvidia/pytorch:24.12-py3
 - 硬件: 1x NVIDIA RTX 4090

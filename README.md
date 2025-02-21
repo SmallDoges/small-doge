@@ -43,9 +43,9 @@ English | [简体中文](./README_zh.md)
 This project aims to develop a series of dynamic and fast small models to promote their application in the field of embodied intelligence, especially in resource-constrained environments, to meet real-time response needs, and to promote the practical application of downstream fields.
 
 > [!TIP]
-> *As of 2025-2-2*: The small doge series has completed the pre-training of 2 model models, with a minimum of 20M, which can have smooth conversation capabilities!
+> *As of 2025-2-20*: The small doge series has completed the pre-training of 3 model models, with a minimum of 20M, which can have smooth conversation capabilities!
 
-| Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
+| Model | tokens | max_train_steps | batch_size | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
 |---|---|---|---|---|---|---|---|---|---|
 | Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 | Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
@@ -53,7 +53,7 @@ This project aims to develop a series of dynamic and fast small models to promot
 
 > The following one model are currently in pre-training, and researchers with the capability are welcome to help(poor man's cry)!🙏
 
-| Model | tokens | max_train_steps | accumulate_steps | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
+| Model | tokens | max_train_steps | batch_size | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
 |---|---|---|---|---|---|---|---|---|---|
 | Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
 
@@ -76,7 +76,7 @@ As shown in the figure, the sequence transformation part of the Doge architectur
 
 ## Requirements
 
-Our codebase requires the following environment:
+Our codebase requires the following environment if you need to pre-train or fine-tune:
 
 - Windows or Linux
 - NVIDIA GPU
@@ -129,8 +129,8 @@ Here are the initial learning rates required to continue training at each checkp
 - **Doge-320M**: 2e-3
 
 | Model | Learning Rate | Schedule | Warmup Steps | Stable Steps |
-|-------|---------------|----------|--------------|--------------|
-| [Doge-20M]((https://huggingface.co/SmallDoge/Doge-20M-checkpoint)) | 8e-3 | wsd_scheduler | 800 | 6400 |
+|---|---|---|---|---|
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M-checkpoint) | 8e-3 | wsd_scheduler | 800 | 6400 |
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M-checkpoint) | 6e-3 | wsd_scheduler | 1600 | 12800 |
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint) | 4e-3 | wsd_scheduler | 2400 | 19200 |
 | Doge-320M | 2e-3 | wsd_scheduler | 3200 | 25600 ||
@@ -151,7 +151,6 @@ Here are the initial learning rates required to continue training at each checkp
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.4 | 0.2 | 37.9 | 61.4 | 31.5 | 28.0 | 50.8 | 62 |
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | 29.2 | 4.8 | 44.4 | 66.3 | 38.7 | 34.4 | 52.2 | 28 |
 
-> All evaluations are done using five-shot settings, without additional training on the benchmarks.
 
 ### Doge-Instruct
 
@@ -167,7 +166,15 @@ Here are the initial learning rates required to continue training at each checkp
 | [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
 | [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
 
-**Environment**:
+**Evaluation**:
+| Model | IFEval (Prompt Strict Acc) | MMLU | BBH | ARC | PIQA | HellaSwag | tokens / s on i7-11 CPU |
+|---|---|---|---|---|---|---|---|
+| [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | 7.3 | 26.3 | 18.3 | 29.2 | 57.8 | 27.8 | 142 |
+| [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | 7.4 | 27.5 | 27.7 | 37.5 | 61.4 | 32.1 | 62 |
+| [Doge-160M-Instruct](https://huggingface.co/SmallDoge/Doge-160M-Instruct) | 16.8 | 29.7 | 29.1 | 42.8 | 64.1 | 37.1 | 28 |
+
+
+**Training Environment**:
 
 - Image: nvcr.io/nvidia/pytorch:24.12-py3
 - Hardware: 1x NVIDIA RTX 4090
