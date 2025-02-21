@@ -66,6 +66,12 @@ SYSTEM_PROMPT_FOR_GRPO = (
 )
 
 def openr1_math_map(example):
+    # Replace <think> with <|begin_of_thought|>, </think> with <|end_of_thought|>, <answer> with <|begin_of_solution|>, </answer> with <|end_of_solution|>
+    messages = example["messages"]
+    for message in messages:
+        message["content"] = message["content"].replace("<think>", "<|begin_of_thought|>").replace("</think>", "<|end_of_thought|>").replace("<answer>", "<|begin_of_solution|>").replace("</answer>", "<|end_of_solution|>")
+    example["messages"] = messages
+    
     return {
             "prompt": [
                 {"role": "system", "content": SYSTEM_PROMPT_FOR_GRPO},
