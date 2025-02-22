@@ -25,11 +25,11 @@ torch_dtype: bfloat16
 dataset_name: ./datasets/dpo_dataset
 dataset_configs:
 - all
-preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
 max_length: 1024
 max_prompt_length: 512
 
 # DPO Trainer arguments
+preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
 seed: 233
 do_train: True
 num_train_epochs: 2

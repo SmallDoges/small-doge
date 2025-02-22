@@ -25,11 +25,11 @@ torch_dtype: bfloat16
 dataset_name: ./datasets/distill_dataset
 dataset_configs:
 - all
-preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
 max_seq_length: 4096
 packing: true
 
 # SFT trainer config
+preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
 seed: 233
 do_train: true
 num_train_epochs: 1
