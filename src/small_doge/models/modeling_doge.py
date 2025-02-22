@@ -490,18 +490,17 @@ class DogeCDMoE(DogeMLP):
         self.act_fn = ACT2FN[config.hidden_act]
 
         self.expert_retrieval_dim = config.expert_retrieval_size
-        self.num_cdmoe_experts = config.num_cdmoe_experts
-        self.num_cdmoe_heads = config.num_cdmoe_heads
-        self.num_cdmoe_experts_per_head = config.num_cdmoe_experts_per_head
-        self.num_keys = int(math.sqrt(self.num_cdmoe_experts))
+        self.num_experts = config.num_experts
+        self.top_k = config.num_experts_per_tok
+        self.num_keys = int(math.sqrt(self.num_experts))
 
         # queries and keys for retrieval experts
-        self.queries_proj = nn.Linear(self.hidden_dim, self.num_cdmoe_heads * self.expert_retrieval_dim, bias=False)
-        self.keys = nn.Parameter(torch.zeros(2 * self.num_cdmoe_heads, self.expert_retrieval_dim // 2, self.num_keys))
+        self.queries_proj = nn.Linear(self.hidden_dim, self.expert_retrieval_dim, bias=False)
+        self.keys = nn.Parameter(torch.zeros(2, self.expert_retrieval_dim // 2, self.num_keys))
 
         # experts
-        self.down_embed = nn.Embedding(self.num_cdmoe_experts, self.hidden_dim)
-        self.up_embed = nn.Embedding(self.num_cdmoe_experts, self.hidden_dim)
+        self.down_embed = nn.Embedding(self.num_experts, self.hidden_dim)
+        self.up_embed = nn.Embedding(self.num_experts, self.hidden_dim)
 
     def forward(
         self,
@@ -511,18 +510,18 @@ class DogeCDMoE(DogeMLP):
         bsz, seq_len, _ = hidden_states.shape
 
         # get routing weights with queries and keys
-        queries = self.queries_proj(hidden_states).view(2 * self.num_cdmoe_heads, bsz * seq_len, -1)
-        routing_weights = torch.bmm(queries, self.keys).view(2, bsz * seq_len, self.num_cdmoe_heads, self.num_keys)
+        queries = self.queries_proj(hidden_states).view(2, bsz * seq_len, -1)
+        routing_weights = torch.bmm(queries, self.keys).view(2, bsz * seq_len, self.num_keys)
 
         # get experts with the highest routing weights
-        (scores_x, scores_y), (indices_x, indices_y) = routing_weights.topk(self.num_cdmoe_experts_per_head, dim=-1)
+        (scores_x, scores_y), (indices_x, indices_y) = routing_weights.topk(self.top_k, dim=-1)
         all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
         all_scores = all_scores.view(*scores_x.shape[:-1], -1)
         all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
         all_indices = all_indices.view(*indices_x.shape[:-1], -1)
-        scores, pk_indices = all_scores.topk(self.num_cdmoe_experts_per_head, dim=-1)
-        scores = scores.view(bsz * seq_len, self.num_cdmoe_heads * self.num_cdmoe_experts_per_head)
-        indices = all_indices.gather(-1, pk_indices).view(bsz * seq_len, self.num_cdmoe_heads * self.num_cdmoe_experts_per_head)
+        scores, pk_indices = all_scores.topk(self.top_k, dim=-1)
+        scores = scores.view(bsz * seq_len, self.top_k)
+        indices = all_indices.gather(-1, pk_indices).view(bsz * seq_len, self.top_k)
         down_embed = self.down_embed(indices)
         up_embed = self.up_embed(indices)
 
