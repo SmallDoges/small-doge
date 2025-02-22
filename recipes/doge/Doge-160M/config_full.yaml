@@ -41,9 +41,9 @@ torch_dtype: bfloat16
 dataset_name: ./datasets/pt_dataset
 dataset_configs:
 - all
-preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
 
 # PT trainer arguments
+preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
 seed: 233
 do_train: True
 max_steps: 24000

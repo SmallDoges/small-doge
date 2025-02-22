@@ -25,15 +25,15 @@ torch_dtype: bfloat16
 dataset_name: ./datasets/grpo_dataset
 dataset_configs:
 - all
-# If you are using vllm, please comment out preprocessing_num_workers and use num_processes
-preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
-# Num processes is less by 1 as vLLM is using 1 GPU
-# num_processes: 7
 max_prompt_length: 512
 max_completion_length: 1024
 packing: true
 
 # GRPO trainer config
+# If you are using vllm, please comment out preprocessing_num_workers and use num_processes
+preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
+# Num processes is less by 1 as vLLM is using 1 GPU
+# num_processes: 7
 seed: 233
 use_vllm: false
 vllm_device: auto
