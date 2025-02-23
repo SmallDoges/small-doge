@@ -602,7 +602,7 @@ class DogeCDMoE(DogeMLP):
 
         # get routing weights with queries and keys
         queries = self.queries_proj(hidden_states).view(2, bsz * seq_len, -1)
-        routing_weights = torch.bmm(queries, self.keys).view(2, bsz * seq_len, self.num_keys)
+        routing_weights = torch.bmm(queries, self.keys)
 
         # get experts with the highest routing weights
         (scores_x, scores_y), (indices_x, indices_y) = routing_weights.topk(self.top_k, dim=-1)
