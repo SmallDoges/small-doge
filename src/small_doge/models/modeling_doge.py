@@ -24,6 +24,7 @@
 
 import math
 from typing import Callable, List, Optional, Tuple, Union
+from packaging import version
 
 import torch
 import torch.nn.functional as F
@@ -47,7 +48,7 @@ from transformers.utils import (
 )
 from .configuration_doge import DogeConfig
 
-if is_torch_flex_attn_available():
+if is_torch_flex_attn_available() and version.parse(torch.__version__) >= version.parse("2.6.0"):
     from torch.nn.attention.flex_attention import flex_attention
 
 logger = logging.get_logger(__name__)
@@ -286,19 +287,8 @@ def flex_attention_forward(
     if attention_mask is not None:
         causal_mask = causal_mask[:, :, :, : key.shape[-2]]
 
-    if is_causal is None:
-        is_causal = causal_mask is None and query.shape[2] > 1
-
-    def causal_mod(score, batch, head, q_idx, kv_idx):
-        if softcap is not None:
-            score = softcap * torch.tanh(score / softcap)
-        if causal_mask is not None:
-            score = score + causal_mask[batch][0][q_idx][kv_idx]
-        if head_mask is not None:
-            score = score + head_mask[batch][head][0][0]
-        return score
-
-    def dynamic_mod(score, batch, head, q_idx, kv_idx):
+    # NOTE: Pytorch 2.6.0 and above support dynamic mask attention
+    def mask_mod(score, batch, head, q_idx, kv_idx):
         if softcap is not None:
             score = softcap * torch.tanh(score / softcap)
         if causal_mask is not None:
@@ -306,10 +296,6 @@ def flex_attention_forward(
         if head_mask is not None:
             score = score + head_mask[batch][head][0][0]
         return score
-
-    # TODO: flex_attention: As of pytorch 2.5.1, captured buffers that require grad are not yet supported.
-    # NOTE: So we only use flex_attention in inference mode.
-    mask_mod = causal_mod if is_causal or module.training else dynamic_mod
 
     attn_output, attention_weights = flex_attention(
         query=query,
@@ -618,7 +604,7 @@ class DogePreTrainedModel(PreTrainedModel):
     _no_split_modules = ["DogeDecoderLayer"]
     _skip_keys_device_placement = ["past_key_values"]
     _supports_sdpa = True
-    # _supports_flex_attn = True # TODO: enable this when flex_attention is fully supported
+    _supports_flex_attn = True
     _supports_cache_class = True
     _supports_quantized_cache = True
     _supports_static_cache = True
