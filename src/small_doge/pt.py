@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import re
 import os
 import sys
 from argparse import ArgumentParser
@@ -29,16 +30,61 @@ from transformers import (
     DataCollatorForLanguageModeling,
     Trainer,
     TrainingArguments,
+    TrainerControl,
+    TrainerState,
+    TrainerCallback,
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
 
 import yaml
-from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
+from small_doge.models.modeling_doge import DogeConfig, DogeForCausalLM, DogeModel
 from trl import ModelConfig, ScriptArguments, TrlParser
 
 
 logger = logging.getLogger(__name__)
+
+
+class MoEWarmupCallback(TrainerCallback):
+    def __init__(self, warmup_steps: int, model: DogeForCausalLM):
+        self.warmup_steps = warmup_steps
+        self.model = model
+        self.in_warmup_phase = True
+        self._set_warmup_phase()
+        logger.info(f"MoE warm-up phase, only train specific parameters, until step {warmup_steps}")
+    
+    def _set_warmup_phase(self):
+        """Set to MoE warm-up phase, only train specific parameters"""
+        MoE_params = [
+            r"^layers\.\d+\.feed_forward\.queries_proj\.weight$",
+            r"^layers\.\d+\.feed_forward\.keys$",
+            r"^layers\.\d+\.feed_forward\.down_embed\.weight$",
+            r"^layers\.\d+\.feed_forward\.up_embed\.weight$",
+        ]
+
+        # Freeze all parameters first
+        unfreeze_params = []
+        for name, param in self.model.named_parameters():
+            param.requires_grad = False
+
+        # Then unfreeze the target MoE parameters
+        for name, param in self.model.named_parameters():
+            if any(re.match(pattern, name) for pattern in MoE_params):
+                param.requires_grad = True
+                unfreeze_params.append(name)
+
+        logger.info(f"MoE warm-up phase: unfreeze {unfreeze_params}, freeze other parameters")
+
+    def _set_full_train_phase(self):
+        """Set to all parameters training phase"""
+        for name, param in self.model.named_parameters():
+            param.requires_grad = True
+        logger.info("MoE warm-up phase finished, unfreeze all parameters")
+
+    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        if state.global_step == self.warmup_steps and self.in_warmup_phase:
+            self._set_full_train_phase()
+            self.in_warmup_phase = False
 
 
 def main(script_args, training_args, model_args, model_config):
@@ -129,6 +175,7 @@ def main(script_args, training_args, model_args, model_config):
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         processing_class=tokenizer,
         data_collator=data_collator,
+        callbacks=[MoEWarmupCallback(model_args.warmup_steps, model)],
     )
 
     ###############
