@@ -56,10 +56,10 @@ class MoEWarmupCallback(TrainerCallback):
     def _set_warmup_phase(self):
         """Set to MoE warm-up phase, only train specific parameters"""
         MoE_params = [
-            r"^layers\.\d+\.feed_forward\.queries_proj\.weight$",
-            r"^layers\.\d+\.feed_forward\.keys$",
-            r"^layers\.\d+\.feed_forward\.down_embed\.weight$",
-            r"^layers\.\d+\.feed_forward\.up_embed\.weight$",
+            r"^model\.layers\.\d+\.feed_forward\.queries_proj\.weight$",
+            r"^model\.layers\.\d+\.feed_forward\.keys$",
+            r"^model\.layers\.\d+\.feed_forward\.down_embed\.weight$",
+            r"^model\.layers\.\d+\.feed_forward\.up_embed\.weight$",
         ]
 
         # Freeze all parameters first
