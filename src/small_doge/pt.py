@@ -175,7 +175,7 @@ def main(script_args, training_args, model_args, model_config):
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         processing_class=tokenizer,
         data_collator=data_collator,
-        callbacks=[MoEWarmupCallback(model_args.warmup_steps, model)],
+        callbacks=[MoEWarmupCallback(training_args.warmup_steps, model)],
     )
 
     ###############
