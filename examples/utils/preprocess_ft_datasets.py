@@ -1,18 +1,28 @@
+import re
 from transformers import AutoTokenizer
 from datasets import load_from_disk, DatasetDict
 from argparse import ArgumentParser
+import trl
+
 
 # In the case of TRL>=0.15.0, apply_chat_template does not need to be applied here, but in the case of TRL<0.15.0, apply_chat_template needs to be applied here
+if trl.__version__ >= "0.15.0":
+    is_apply_chat_template = False
+else:
+    is_apply_chat_template = True
+
 
 def smoltalk_map(example, tokenizer):
     messages = example['messages']
 
-    # example['text'] = tokenizer.apply_chat_template(
-    #     messages,
-    #     tokenize=False,
-    # )
+    if is_apply_chat_template:
+        example['text'] = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+        )
+    else:
+        example['text'] = messages
 
-    example['text'] = messages
     return example
 
 def ultrafeedback_binarized_map(example, tokenizer):
@@ -21,60 +31,63 @@ def ultrafeedback_binarized_map(example, tokenizer):
     chosen_messages = example["chosen"][-1:]
     rejected_messages = example["rejected"][-1:]
 
-    # example['text_prompt'] = tokenizer.apply_chat_template(
-    #     prompt_messages,
-    #     tokenize=False,
-    # )
-    # example['text_chosen'] = tokenizer.apply_chat_template(
-    #     chosen_messages,
-    #     tokenize=False,
-    # )
-    # example['text_rejected'] = tokenizer.apply_chat_template(
-    #     rejected_messages,
-    #     tokenize=False,
-    # )
-
-    example['text_prompt'] = prompt_messages
-    example['text_chosen'] = chosen_messages
-    example['text_rejected'] = rejected_messages
+    if is_apply_chat_template:
+        example['text_prompt'] = tokenizer.apply_chat_template(
+            prompt_messages,
+            tokenize=False,
+        )
+        example['text_chosen'] = tokenizer.apply_chat_template(
+            chosen_messages,
+            tokenize=False,
+        )
+        example['text_rejected'] = tokenizer.apply_chat_template(
+            rejected_messages,
+            tokenize=False,
+        )
+    else:
+        example['text_prompt'] = prompt_messages
+        example['text_chosen'] = chosen_messages
+        example['text_rejected'] = rejected_messages
 
     return example
 
 def open_thoughts_map(example, tokenizer):
-    prompt = example['system']
+    # prompt = example['system']
     messages = example['conversations']
 
+    cleaned_assistant = re.sub(
+        r'<\|begin_of_thought\|>.*?<\|end_of_thought\|>', '', 
+        messages[1]["value"],
+        flags=re.DOTALL
+    )
+    messages[1]["value"] = cleaned_assistant
     conversations = [
-        {"role": "system", "content": prompt},
+        # {"role": "system", "content": prompt},
         {"role": "user", "content": messages[0]["value"]},
         {"role": "assistant", "content": messages[1]["value"]},
     ]
 
-    # example['text'] = tokenizer.apply_chat_template(
-    #     conversations,
-    #     tokenize=False,
-    # )
-
-    example['messages'] = conversations
+    if is_apply_chat_template:
+        example['text'] = tokenizer.apply_chat_template(
+            conversations,
+            tokenize=False,
+        )
+    else:
+        example['messages'] = conversations
     return example
 
-SYSTEM_PROMPT_FOR_GRPO = (
-    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant "
-    "first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning "
-    "process and answer are enclosed within <|begin_of_thought|> <|end_of_thought|> and <|begin_of_solution|> <|end_of_solution|> tags, respectively, i.e., "
-    "<|begin_of_thought|> reasoning process here <|end_of_thought|><|begin_of_solution|> answer here <|end_of_solution|>"
-)
-
 def openr1_math_map(example):
-    # Replace <think> with <|begin_of_thought|>, </think> with <|end_of_thought|>, <answer> with <|begin_of_solution|>, </answer> with <|end_of_solution|>
+    system_prompt = "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are enclosed within <|begin_of_thought|> <|end_of_thought|> and <|begin_of_solution|> <|end_of_solution|> tags, respectively, i.e., <|begin_of_thought|> reasoning process here <|end_of_thought|><|begin_of_solution|> answer here <|end_of_solution|>."
     messages = example["messages"]
+
+    # Replace <think> with <|begin_of_thought|>, </think> with <|end_of_thought|>, <answer> with <|begin_of_solution|>, </answer> with <|end_of_solution|>
     for message in messages:
         message["content"] = message["content"].replace("<think>", "<|begin_of_thought|>").replace("</think>", "<|end_of_thought|>").replace("<answer>", "<|begin_of_solution|>").replace("</answer>", "<|end_of_solution|>")
     example["messages"] = messages
-    
+
     return {
             "prompt": [
-                {"role": "system", "content": SYSTEM_PROMPT_FOR_GRPO},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": example["problem"]},
             ],
         }
