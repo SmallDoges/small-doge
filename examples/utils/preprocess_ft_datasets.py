@@ -68,7 +68,7 @@ def open_thoughts_map(example, tokenizer):
     ]
 
     if is_apply_chat_template:
-        example['text'] = tokenizer.apply_chat_template(
+        example['messages'] = tokenizer.apply_chat_template(
             conversations,
             tokenize=False,
         )
