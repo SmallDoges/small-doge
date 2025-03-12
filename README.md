@@ -183,9 +183,10 @@ If you use this codebase, or otherwise find our work valuable, please cite our r
 
 ```bibtex
 @misc{smalldoges,
-      title={SmallDoges}, 
-      author={Jingze, Shi and Yifan, Wu and Bingheng, Wu},
-      year={2025},
-      month={March}
+    title={SmallDoges: A Family of Dynamic UltraFast Small Language Models}, 
+    author={Jingze, Shi and Yifan, Wu and Bingheng, Wu and Yuyu, Luo},
+    year={2025},
+    month={March},
+    url={https://github.com/SmallDoges/small-doge}
 }
 ```

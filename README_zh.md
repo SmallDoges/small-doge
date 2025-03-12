@@ -181,9 +181,10 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 
 ```bibtex
 @misc{smalldoges,
-      title={SmallDoges}, 
-      author={Jingze, Shi and Yifan, Wu and Bingheng, Wu},
-      year={2025},
-      month={March}
+    title={SmallDoges: A Family of Dynamic UltraFast Small Language Models}, 
+    author={Jingze, Shi and Yifan, Wu and Bingheng, Wu and Yuyu, Luo},
+    year={2025},
+    month={March},
+    url={https://github.com/SmallDoges/small-doge}
 }
 ```
