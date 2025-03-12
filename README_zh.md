@@ -6,8 +6,8 @@
 
 <div align="center">
 
+<!-- [![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2412.11834&color=B31B1B&logo=arXiv)](https://arxiv.org/abs/2412.11834) -->
 [![Discord](https://img.shields.io/badge/Discord-Small%20Doges-7289da?logo=discord&logoColor=white&color=7289da)](https://discord.gg/P2yYH95N)
-[![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2412.11834&color=B31B1B&logo=arXiv)](https://arxiv.org/abs/2412.11834)
 [![huggingface](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-FFD21E)](https://huggingface.co/collections/SmallDoge/doge-slm-679cc991f027c4a3abbded4a)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -21,9 +21,13 @@
 
 </div>
 
-# small-doge
+**新闻**:
 
-**新闻**: 🎉🎉🎉 我们现在已经支持 **预训练的Doge-Base**, **指令微调的Doge-Instruct**, 以及**推理微调的Doge-R1**的全部训练流程, 请参阅[指南](./recipes/doge/README_zh.md)!
+* **[2025-3-12]** 🎉我们已经完成了 **Doge-20M**, **Doge-60M**, **Doge-160M**, **Doge-320** 四种参数规模的Base模型的预训练!
+* **[2025-3-9]** 🎉我们发布了 **SmallThoughts** 推理数据集, 大幅降低推理微调的成本!
+* **[2025-2-20]** 🎉 我们现在已经支持 **预训练的Doge-Base**, **指令微调的Doge-Instruct**, 以及**推理微调的Doge-Reason**的全部训练流程, 请参阅[指南](./recipes/doge/README_zh.md)!
+
+# small-doge
 
 * 本项目旨在从**0**开始, 最快仅用3小时！即可训练出仅为13M大小的微型语言模型[Doge-20M](https://huggingface.co/SmallDoge/Doge-20M)!🚀
 * small doge系列极其轻量, 最小版本体积约是 GPT3 的 **$\frac{1}{7800}$**, 力求做到最普通的个人GPU也可快速推理甚至训练.🏎️
@@ -41,36 +45,11 @@
 
 本项目旨在开发一系列动态快速的小型模型, 以促进其在具身智能领域的应用, 特别是在资源受限的环境下, 满足实时响应需求, 推动下游领域的实际应用落地.
 
-> [!TIP]
-> *截至2025-2-20*: small doge系列已完成了3个型号模型的预训练, 最小仅需20M, 即可具备流畅的对话能力!
-
-| 模型 | 代币 | 训练步数 | 批次 | 学习率 | 调度器 | 预热比例 | 衰减比例 | 权重衰减 | 最小学习率 |
-|---|---|---|---|---|---|---|---|---|---|
-| Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-| Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-| Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-
-> 以下一个型号正在预训练, 欢迎有能力的研究员帮忙(poor man的哀嚎)!🙏
-
-| 模型 | 代币 | 训练步数 | 批次 | 学习率 | 调度器 | 预热比例 | 衰减比例 | 权重衰减 | 最小学习率 |
-|---|---|---|---|---|---|---|---|---|---|
-| Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-
 <div align="center">
-    <img src="./assets/doge_architecture.png" alt="drawing" width="600"/>
+    <img src="./assets/small-doge.png" alt="drawing" width="600"/>
 </div>
 
 如图所示, Doge 架构的序列变换部分使用了 `Dynamic Mask Attention`, 可以理解为在训练时使用与值状态相关的自注意力, 在推理时使用没有过去状态衰减的状态空间, 以解决现有的 Transformer 或 SSM 在长文本中迷失的问题. Doge 的状态变换部分使用了 `Cross Domain Mixture of Experts`, 由密集线性层和稀疏嵌入层组成, 并可以额外增加稀疏参数, 以从密集权重检查点继续训练而无需重新训练整个模型, 从而降低模型的持续迭代成本. 此外, Doge 还使用了具有可学习参数的 `RMSNorm` 和 `Residual` 来适应深度模型的梯度范围.
-
-**Dynamic Mask Attention 模块**
-
-![DMAttn](./assets/dmattn.png)
-![DMAttn](./assets/mqar.png)
-
-**Cross Domain Mixture of Experts 模块**
-
-![CDMoE](./assets/cdmoe.png)
-![CDMoE](./assets/merm.png)
 
 
 ## 安装要求
@@ -125,45 +104,48 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 - **[Doge-20M](https://huggingface.co/SmallDoge/Doge-20M-checkpoint)**: 8e-3
 - **[Doge-60M](https://huggingface.co/SmallDoge/Doge-60M-checkpoint)**: 6e-3
 - **[Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint)**: 4e-3
-- **Doge-320M**: 2e-3
+- **[Doge-320M](https://huggingface.co/SmallDoge/Doge-320M-checkpoint)**: 2e-3
 
 | 模型 | 学习率 | 调度器 | 预热步数 | 稳定步数 |
 |---|---|---|---|---|
 | [Doge-20M]((https://huggingface.co/SmallDoge/Doge-20M-checkpoint)) | 8e-3 | wsd_scheduler | 800 | 6400 |
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M-checkpoint) | 6e-3 | wsd_scheduler | 1600 | 12800 |
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint) | 4e-3 | wsd_scheduler | 2400 | 19200 |
-| Doge-320M | 2e-3 | wsd_scheduler | 3200 | 25600 |
+| [Doge-320M](https://huggingface.co/SmallDoge/Doge-320M-checkpoint) | 2e-3 | wsd_scheduler | 3200 | 25600 |
 
 ### Doge-Base
 
 **预训练**:
-| 模型 | 训练数据 | 步数 | 上下文长度 | 令牌 | 学习率 | 批量大小 | 精度 | RTX 4090 GPU 小时 |
+| 模型 | 训练数据 | 步数 | 上下文长度 | 代币 | 学习率 | 批量大小 | 精度 | RTX 4090 GPU 小时 |
 |---|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 | 14 |
-| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 | 128 |
-| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 24k  | 2048 | 32B | 4e-3 | 1.5M | bfloat16 | 522 |
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 | 14 |
+| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 | 128 |
+| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | [smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 24k  | 2048 | 32B | 4e-3 | 1.5M | bfloat16 | 522 |
+| [Doge-320M](https://huggingface.co/SmallDoge/Doge-320M) | [smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 32k  | 2048 | 64B | 2e-3 | 2M | bfloat16 | 1856 |
 
 **评估**:
 | 模型 | MMLU | TriviaQA | ARC | PIQA | HellaSwag | OBQA | Winogrande | i7-11 CPU上的tokens/s |
 |---|---|---|---|---|---|---|---|---|
 | [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | 25.4 | 0.03 | 29.8 | 58.4 | 27.3 | 25.6 | 50.2 | 142 |
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.4 | 0.2 | 37.9 | 61.4 | 31.5 | 28.0 | 50.8 | 62 |
-| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | 29.2 | 4.8 | 44.4 | 66.3 | 38.7 | 34.4 | 52.2 | 28 |
-
+| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | 29.2 | 4.8 | 44.4 | 70.1 | 43.4 | 34.4 | 52.2 | 28 |
+| [Doge-320M](https://huggingface.co/SmallDoge/Doge-320M) | 33.8 | 9.4 | 52.1 | 73.9 | 52.7 | 37.9 | 55.0 | 16 |
 
 ### Doge-Instruct
 
 **监督微调**:
 | 模型 | 训练数据 | 轮次 | 上下文长度 | 学习率 | 批量大小 | 精度 |
 |---|---|---|---|---|---|---|
-| [Doge-20M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-20M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 8e-4 | 0.25M | bfloat16 |
-| [Doge-60M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-60M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 6e-4 | 0.25M | bfloat16 |
+| [Doge-20M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-20M-Instruct-SFT) | [smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 8e-4 | 0.25M | bfloat16 |
+| [Doge-60M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-60M-Instruct-SFT) | [smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 6e-4 | 0.25M | bfloat16 |
+| [Doge-160M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-160M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 4e-4 | 0.25M | bfloat16 |
 
 **直接优化微调**:
 | 模型 | 训练数据 | 轮次 | 上下文长度 | 学习率 | 批量大小 | 精度 |
 |---|---|---|---|---|---|---|
-| [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
-| [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
+| [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [ultrafeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
+| [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [ultrafeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
+| [Doge-160M-Instruct](https://huggingface.co/SmallDoge/Doge-160M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 4e-5 | 0.125M | bfloat16 |
 
 **评估**:
 | 模型 | IFEval (Prompt Strict Acc) | MMLU | BBH | ARC | PIQA | HellaSwag | tokens / s on i7-11 CPU |
@@ -195,16 +177,13 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 
 ## 引用
 
-如果您使用此代码库, 或者认为我们的工作有价值, 请引用我们的论文:
+如果您使用此代码库, 或者认为我们的工作有价值, 请先引用我们的仓库, 论文很快会发表:
 
 ```bibtex
-@misc{shi2024wonderfulmatrices,
-      title={Wonderful Matrices: Combining for a More Efficient and Effective Foundation Model Architecture}, 
-      author={Jingze Shi and Bingheng Wu},
-      year={2024},
-      eprint={2412.11834},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2412.11834}, 
+@misc{smalldoges,
+      title={SmallDoges}, 
+      author={Jingze, Shi and Yifan, Wu and Bingheng, Wu},
+      year={2025},
+      month={March}
 }
 ```

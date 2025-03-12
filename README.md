@@ -6,8 +6,8 @@
 
 <div align="center">
 
+<!-- [![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2412.11834&color=B31B1B&logo=arXiv)](https://arxiv.org/abs/2412.11834) -->
 [![Discord](https://img.shields.io/badge/Discord-Small%20Doges-7289da?logo=discord&logoColor=white&color=7289da)](https://discord.gg/P2yYH95N)
-[![arXiv](https://img.shields.io/static/v1?label=arXiv&message=2412.11834&color=B31B1B&logo=arXiv)](https://arxiv.org/abs/2412.11834)
 [![huggingface](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-FFD21E)](https://huggingface.co/collections/SmallDoge/doge-slm-679cc991f027c4a3abbded4a)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -22,9 +22,13 @@ English | [简体中文](./README_zh.md)
 
 </div>
 
-# small-doge
+**News**:
 
-**News**: 🎉🎉🎉 We now support the full training process of **pre-trained Doge-Base**, **instruction fine-tuned Doge-Instruct**, and **reasoning fine-tuned Doge-R1**, please refer to the [guide](./recipes/doge/README.md)!
+* **[2025-3-12]** 🎉We have completed the pre-training of four base models with parameters of **Doge-20M**, **Doge-60M**, **Doge-160M**, and **Doge-320**!
+* **[2025-3-9]** 🎉We released the **SmallThoughts** inference dataset, greatly reducing the cost of inference fine-tuning!
+* **[2025-2-20]** 🎉 We now support the full training process of **pre-trained Doge-Base**, **instruction fine-tuned Doge-Instruct**, and **reasoning fine-tuned Doge-R1**, please refer to the [guide](./recipes/doge/README.md)!
+
+# small-doge
 
 * This project aims to train a series of dynamic and fast small models from scratch, with the fastest training time of only 3 hours! You can train a tiny language model [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) in just 13M!🚀
 * The small doge series is extremely lightweight, with the smallest version being about **$\frac{1}{7800}$** the size of GPT3, and strives to make even the most ordinary personal GPU capable of fast inference and even training.🏎️
@@ -43,36 +47,11 @@ English | [简体中文](./README_zh.md)
 
 This project aims to develop a series of dynamic and fast small models to promote their application in the field of embodied intelligence, especially in resource-constrained environments, to meet real-time response needs, and to promote the practical application of downstream fields.
 
-> [!TIP]
-> *As of 2025-2-20*: The small doge series has completed the pre-training of 3 model models, with a minimum of 20M, which can have smooth conversation capabilities!
-
-| Model | tokens | max_train_steps | batch_size | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
-|---|---|---|---|---|---|---|---|---|---|
-| Doge-20M | 4B | 8,000 | 256 | 8e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-| Doge-60M | 16B | 16,000 | 512 | 6e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-| Doge-160M | 32B | 24,000 | 768 | 4e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-
-> The following one model are currently in pre-training, and researchers with the capability are welcome to help(poor man's cry)!🙏
-
-| Model | tokens | max_train_steps | batch_size | learning_rate | scheduler | warmup_ratio | decay_ratio | weight_decay | min_lr_rate |
-|---|---|---|---|---|---|---|---|---|---|
-| Doge-320M | 64B | 32,000 | 1024 | 2e-3 | warmup_stable_decay | 0.1 | 0.1 | 0.01 | 0.0 |
-
 <div align="center">
-    <img src="./assets/doge_architecture.png" alt="drawing" width="600"/>
+    <img src="./assets/small-doge.png" alt="drawing" width="600"/>
 </div>
 
 As shown in the figure, the sequence transformation part of the Doge architecture uses `Dynamic Mask Attention`, which can be understood as using self-attention related to value states during training, and using state-space without past state decay during inference, to solve the problem of existing Transformers or SSMs getting lost in long text. The state transformation part of Doge uses `Cross Domain Mixture of Experts`, which consists of dense linear layers and sparse embedding layers, and can additionally increase sparse parameters to continue training from dense weight checkpoints without retraining the entire model, thereby reducing the cost of continuous iteration of the model. In addition, Doge also uses `RMSNorm` and `Residual` with learnable parameters to adapt the gradient range of deep models.
-
-**Dynamic Mask Attention Module**
-
-![DMAttn](./assets/dmattn.png)
-![DMAttn](./assets/mqar.png)
-
-**Cross Domain Mixture of Experts Module**
-
-![CDMoE](./assets/cdmoe.png)
-![CDMoE](./assets/merm.png)
 
 
 ## Requirements
@@ -127,45 +106,48 @@ Here are the initial learning rates required to continue training at each checkp
 - **[Doge-20M](https://huggingface.co/SmallDoge/Doge-20M-checkpoint)**: 8e-3
 - **[Doge-60M](https://huggingface.co/SmallDoge/Doge-60M-checkpoint)**: 6e-3
 - **[Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint)**: 4e-3
-- **Doge-320M**: 2e-3
+- **[Doge-320M](https://huggingface.co/SmallDoge/Doge-320M-checkpoint)**: 2e-3
 
 | Model | Learning Rate | Schedule | Warmup Steps | Stable Steps |
 |---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M-checkpoint) | 8e-3 | wsd_scheduler | 800 | 6400 |
+| [Doge-20M]((https://huggingface.co/SmallDoge/Doge-20M-checkpoint)) | 8e-3 | wsd_scheduler | 800 | 6400 |
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M-checkpoint) | 6e-3 | wsd_scheduler | 1600 | 12800 |
 | [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M-checkpoint) | 4e-3 | wsd_scheduler | 2400 | 19200 |
-| Doge-320M | 2e-3 | wsd_scheduler | 3200 | 25600 ||
+| [Doge-320M](https://huggingface.co/SmallDoge/Doge-320M-checkpoint) | 2e-3 | wsd_scheduler | 3200 | 25600 |
 
 ### Doge-Base
 
 **Pre-Training**:
 | Model | Training Data | Steps | Content Length | Tokens | LR | Batch Size | Precision | RTX 4090 GPU hours |
 |---|---|---|---|---|---|---|---|---|
-| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 | 14 |
-| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 | 128 |
-| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | [HuggingFaceTB/smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 24k  | 2048 | 32B | 4e-3 | 1.5M | bfloat16 | 522 |
+| [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | [smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 8k  | 2048 | 4B | 8e-3 | 0.5M | bfloat16 | 14 |
+| [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | [smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 16k  | 2048 | 16B | 6e-3 | 1M | bfloat16 | 128 |
+| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | [smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 24k  | 2048 | 32B | 4e-3 | 1.5M | bfloat16 | 522 |
+| [Doge-320M](https://huggingface.co/SmallDoge/Doge-320M) | [smollm-corpus](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus) | 32k  | 2048 | 64B | 2e-3 | 2M | bfloat16 | 1856 |
 
 **Evaluation**:
 | Model | MMLU | TriviaQA | ARC | PIQA | HellaSwag | OBQA | Winogrande | tokens / s on i7-11 CPU |
 |---|---|---|---|---|---|---|---|---|
 | [Doge-20M](https://huggingface.co/SmallDoge/Doge-20M) | 25.4 | 0.03 | 29.8 | 58.4 | 27.3 | 25.6 | 50.2 | 142 |
 | [Doge-60M](https://huggingface.co/SmallDoge/Doge-60M) | 26.4 | 0.2 | 37.9 | 61.4 | 31.5 | 28.0 | 50.8 | 62 |
-| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | 29.2 | 4.8 | 44.4 | 66.3 | 38.7 | 34.4 | 52.2 | 28 |
-
+| [Doge-160M](https://huggingface.co/SmallDoge/Doge-160M) | 29.2 | 4.8 | 44.4 | 70.1 | 43.4 | 34.4 | 52.2 | 28 |
+| [Doge-320M](https://huggingface.co/SmallDoge/Doge-320M) | 33.8 | 9.4 | 52.1 | 73.9 | 52.7 | 37.9 | 55.0 | 16 |
 
 ### Doge-Instruct
 
 **SFT**:
 | Model | Training Data | Epochs | Content Length | LR | Batch Size | Precision |
 |---|---|---|---|---|---|---|
-| [Doge-20M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-20M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 8e-4 | 0.25M | bfloat16 |
-| [Doge-60M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-60M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 6e-4 | 0.25M | bfloat16 |
+| [Doge-20M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-20M-Instruct-SFT) | [smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 8e-4 | 0.25M | bfloat16 |
+| [Doge-60M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-60M-Instruct-SFT) | [smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 6e-4 | 0.25M | bfloat16 |
+| [Doge-160M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-160M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 4e-4 | 0.25M | bfloat16 |
 
 **DPO**:
 | Model | Training Data | Epochs | Content Length | LR | Batch Size | Precision |
 |---|---|---|---|---|---|---|
-| [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
-| [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
+| [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [ultrafeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
+| [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [ultrafeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
+| [Doge-160M-Instruct](https://huggingface.co/SmallDoge/Doge-160M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 4e-5 | 0.125M | bfloat16 |
 
 **Evaluation**:
 | Model | IFEval (Prompt Strict Acc) | MMLU | BBH | ARC | PIQA | HellaSwag | tokens / s on i7-11 CPU |
@@ -197,16 +179,13 @@ Here are the initial learning rates required to continue training at each checkp
 
 ## Citation
 
-If you use this codebase, or otherwise find our work valuable, please cite our paper:
+If you use this codebase, or otherwise find our work valuable, please cite our repository, the paper is coming soon:
 
 ```bibtex
-@misc{shi2024wonderfulmatrices,
-      title={Wonderful Matrices: Combining for a More Efficient and Effective Foundation Model Architecture}, 
-      author={Jingze Shi and Bingheng Wu},
-      year={2024},
-      eprint={2412.11834},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2412.11834}, 
+@misc{smalldoges,
+      title={SmallDoges}, 
+      author={Jingze, Shi and Yifan, Wu and Bingheng, Wu},
+      year={2025},
+      month={March}
 }
 ```
