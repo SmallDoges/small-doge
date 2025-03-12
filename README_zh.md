@@ -46,7 +46,7 @@
 本项目旨在开发一系列动态快速的小型模型, 以促进其在具身智能领域的应用, 特别是在资源受限的环境下, 满足实时响应需求, 推动下游领域的实际应用落地.
 
 <div align="center">
-    <img src="./assets/small-doge.png" alt="drawing" width="600"/>
+    <img src="./assets/small-doge.png" alt="drawing" width="100%"/>
 </div>
 
 如图所示, Doge 架构的序列变换部分使用了 `Dynamic Mask Attention`, 可以理解为在训练时使用与值状态相关的自注意力, 在推理时使用没有过去状态衰减的状态空间, 以解决现有的 Transformer 或 SSM 在长文本中迷失的问题. Doge 的状态变换部分使用了 `Cross Domain Mixture of Experts`, 由密集线性层和稀疏嵌入层组成, 并可以额外增加稀疏参数, 以从密集权重检查点继续训练而无需重新训练整个模型, 从而降低模型的持续迭代成本. 此外, Doge 还使用了具有可学习参数的 `RMSNorm` 和 `Residual` 来适应深度模型的梯度范围.
