@@ -506,8 +506,10 @@ class DogeCDMoE(DogeMLP):
 
         # get experts with the highest routing weights
         (scores_x, scores_y), (indices_x, indices_y) = [w.topk(self.num_keys, dim=-1) for w in routing_weights]
-        all_scores = (scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)).view(*all_scores.shape[:-2], -1)
-        all_indices = (indices_x.unsqueeze(-1) * self.num_keys + indices_y.unsqueeze(-2)).view(*all_indices.shape[:-1], -1)
+        all_scores = (scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2))
+        all_indices = (indices_x.unsqueeze(-1) * self.num_keys + indices_y.unsqueeze(-2))
+        all_scores = all_scores.view(*all_scores.shape[:-2], -1)
+        all_indices = all_indices.view(*all_indices.shape[:-1], -1)
         scores, pk_indices = all_scores.topk(self.top_k, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
         down_embed = self.down_embed(indices).transpose(1, 2)
