@@ -493,10 +493,6 @@ class DogeCDMoE(DogeMLP):
         self.down_embed = nn.Embedding(self.num_experts, self.hidden_dim)
         self.up_embed = nn.Embedding(self.num_experts, self.hidden_dim)
 
-        # scaling factor
-        self.mlp_scaling = nn.Parameter(torch.ones(self.hidden_dim))
-        self.moe_scaling = nn.Parameter(torch.zeros(self.hidden_dim))
-
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -509,11 +505,11 @@ class DogeCDMoE(DogeMLP):
         routing_weights = torch.matmul(queries, self.keys)
 
         # get experts with the highest routing weights
-        (scores_x, scores_y), (indices_x, indices_y) = routing_weights.topk(self.top_k, dim=-1)
-        all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
-        all_scores = all_scores.view(*scores_x.shape[:-1], -1)
-        all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
-        all_indices = all_indices.view(*indices_x.shape[:-1], -1)
+        (scores_x, scores_y), (indices_x, indices_y) = [w.topk(self.num_keys, dim=-1) for w in routing_weights]
+        all_scores = (scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2))
+        all_indices = (indices_x.unsqueeze(-1) * self.num_keys + indices_y.unsqueeze(-2))
+        all_scores = all_scores.view(*all_scores.shape[:-2], -1)
+        all_indices = all_indices.view(*all_indices.shape[:-1], -1)
         scores, pk_indices = all_scores.topk(self.top_k, dim=-1)
         indices = all_indices.gather(-1, pk_indices)
         down_embed = self.down_embed(indices).transpose(1, 2)
@@ -524,7 +520,7 @@ class DogeCDMoE(DogeMLP):
         experts_weights = self.act_fn(experts_weights) * scores.softmax(dim=-1)
         experts_states = torch.matmul(experts_weights.view(bsz * seq_len, 1, -1), up_embed).view(bsz, seq_len, -1)
         hidden_states = self.down_proj(self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states))
-        hidden_states = (hidden_states * self.mlp_scaling) + (experts_states * self.moe_scaling)
+        hidden_states = hidden_states + experts_states
         return hidden_states
 
 
