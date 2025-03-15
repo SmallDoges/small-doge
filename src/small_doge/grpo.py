@@ -93,7 +93,9 @@ class GRPOScriptArguments(ScriptArguments):
 
 
 def accuracy_reward(completions, solution, **kwargs):
-    """Reward function that checks if the completion is the same as the ground truth."""
+    f"""
+    Reward function that checks if the completion is the same as the ground truth.
+    """
     contents = [completion[0]["content"] for completion in completions]
     rewards = []
     for content, sol in zip(contents, solution):
@@ -124,7 +126,11 @@ def accuracy_reward(completions, solution, **kwargs):
                 extraction_mode="first_match",
             )
             # Reward 1 if the content is the same as the ground truth, 0 otherwise
-            reward = float(verify(answer_parsed, gold_parsed))
+            try:
+                reward = float(verify(answer_parsed, gold_parsed))
+            except Exception as e:
+                print(f"verify failed: {e}, answer: {answer_parsed}, gold: {gold_parsed}")
+                reward = 0.0
         else:
             # If the gold solution is not parseable, we reward 1 to skip this example
             reward = 1.0
@@ -135,34 +141,49 @@ def accuracy_reward(completions, solution, **kwargs):
 
 
 def format_reward(completions, **kwargs):
-    """Reward function that checks if the completion has a specific format."""
-    pattern = r"^<\|begin_of_thought\|>.*?<\|end_of_thought\|><\|begin_of_solution\|>.*?<\|end_of_solution\|>$"
+    r"""
+    Reward function that checks if the reasoning process is enclosed within <|begin_of_thought|> and <|end_of_thought|> tags, while the solution is enclosed within <|begin_of_solution|> and <|end_of_solution|> tags.
+    """
+    pattern = r"^<\|begin_of_thought\|>\n.*?\n<\|end_of_thought\|>\n\n<\|begin_of_solution\|>\n.*?\n<\|end_of_solution\|>$"
     completion_contents = [completion[0]["content"] for completion in completions]
-    matches = [re.match(pattern, content) for content in completion_contents]
+    matches = [re.match(pattern, content, re.DOTALL | re.MULTILINE) for content in completion_contents]
     return [1.0 if match else 0.0 for match in matches]
 
 
 def reasoning_steps_reward(completions, **kwargs):
-    """Reward function that checks for clear step-by-step reasoning.
-    Regex pattern:
-        Step \d+: - matches "Step 1:", "Step 2:", etc.
-        ^\d+\. - matches numbered lists like "1.", "2.", etc. at start of line
-        \n- - matches bullet points with hyphens
-        \n\* - matches bullet points with asterisks
-        First,|Second,|Next,|Finally, - matches transition words
+    r"""
+    Reward function that checks for clear step-by-step reasoning.
     """
-    pattern = r"(Step \d+:|^\d+\.|\n-|\n\*|First,|Second,|Next,|Finally,)"
-    completion_contents = [completion[0]["content"] for completion in completions]
-    matches = [len(re.findall(pattern, content)) for content in completion_contents]
 
-    # Magic nubmer 3 to encourage 3 steps and more, otherwise partial reward
-    return [min(1.0, count / 3) for count in matches]
+    def count_tags(text: str) -> float:
+        count = 0.0
+        if text.count("**Analysis:**"):
+            count += 0.125
+        if text.count("**First:**"):
+            count += 0.125
+        if text.count("**Second:**"):
+            count += 0.125
+        if text.count("**Next:**"):
+            count += 0.125
+        if text.count("**Reflection:**"):
+            count += 0.125
+        if text.count("**Finally:**"):
+            count += 0.125
+        if text.count("**Summarizing:**"):
+            count += 0.125
+        if text.count("**Solution:**"):
+            count += 0.125
+        return count
+
+    contents = [completion[0]["content"] for completion in completions]
+    return [count_tags(c) for c in contents]
 
 
 def len_reward(completions: list[Dict[str, str]], solution: list[str], **kwargs) -> float:
-    """Compute length-based rewards to discourage overthinking and promote token efficiency.
+    r"""
+    Compute length-based rewards to discourage overthinking and promote token efficiency.
 
-    Taken from from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
+    Taken from the Kimi 1.5 tech report: https://arxiv.org/abs/2501.12599
 
     Args:
         completions: List of model completions
@@ -240,7 +261,8 @@ def get_cosine_scaled_reward(
     max_len: int = 1000,
 ):
     def cosine_scaled_reward(completions, solution, **kwargs):
-        """Reward function that scales based on completion length using a cosine schedule.
+        f"""
+        Reward function that scales based on completion length using a cosine schedule.
 
         Shorter correct solutions are rewarded more than longer ones.
         Longer incorrect solutions are penalized less than shorter ones.
@@ -309,7 +331,7 @@ def get_cosine_scaled_reward(
 
 
 def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
-    """
+    f"""
     Computes N-gram repetition penalty as described in Appendix C.2 of https://arxiv.org/abs/2502.03373.
     Reference implementation from: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
 
@@ -325,7 +347,7 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
         return zip(*[words[i:] for i in range(ngram_size)])
 
     def repetition_penalty_reward(completions, **kwargs) -> float:
-        """
+        f"""
         reward function the penalizes repetitions
         ref implementation: https://github.com/eddycmu/demystify-long-cot/blob/release/openrlhf/openrlhf/reward/repetition.py
 
@@ -399,6 +421,19 @@ def main(script_args, training_args, model_args):
         dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
     else:
         dataset = load_from_disk(script_args.dataset_name)
+
+    def preprocess_function(example):
+        prompt = []
+    
+        prompt.append({"role": "system", "content": "As an assistant, you need to thoroughly explore the problem through precise thinking process before providing the final accurate solution. The thinking process includes Analysis, First, Second, Next, Reflection, Finally and Summarizing behavioral steps to develop a well-considered thought process. Please structure your response into two main sections: Thought and Solution. In the Thought section, detail your reasoning process using the specified format: <|begin_of_thought|> {**Analysis:**\\n\\n**First:**\\n\\n**Second:**\\n\\n**Next:**\\n\\n**Reflection:**\\n\\n**Finally:**\\n\\n**Summarizing:**} <|end_of_thought|>. The solution should remain a logical, accurate, concise expression style and detail necessary step needed to reach the conclusion, formatted as follows: <|begin_of_solution|> {**Solution:**} <|end_of_solution|>."})
+        prompt.append({"role": "user", "content": example["problem"]})
+        return {"prompt": prompt}
+    
+    dataset = dataset.map(preprocess_function)
+
+    for split in dataset:
+        if "messages" in dataset[split].column_names:
+            dataset[split] = dataset[split].remove_columns("messages")
 
     # Get reward functions
     REWARD_FUNCS_REGISTRY = {
