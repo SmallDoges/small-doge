@@ -14,8 +14,10 @@
 
 import logging
 import os
-import sys
 import re
+import sys
+from typing import Optional
+from dataclasses import dataclass, field
 
 import datasets
 import torch
@@ -25,11 +27,11 @@ from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokeni
 from transformers.trainer_utils import get_last_checkpoint
 
 from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
+import trl
 from trl import (
-    DPOConfig,
-    DPOTrainer,
     ModelConfig,
     ScriptArguments,
+    DPOTrainer,
     TrlParser,
     get_kbit_device_map,
     get_peft_config,
@@ -40,7 +42,24 @@ from trl import (
 logger = logging.getLogger(__name__)
 
 
-def main(script_args, training_args, model_args):
+@dataclass
+class DPOConfig(trl.DPOConfig):
+    """
+    args for small-doge DPO
+    """
+
+    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
+    system_prompt: Optional[str] = field(
+        default=None,
+        metadata={"help": "The optional system prompt to use."},
+    )
+
+
+def main(
+    script_args: ScriptArguments,
+    training_args: DPOConfig,
+    model_args: ModelConfig,
+):
     # Set seed for reproducibility
     set_seed(training_args.seed)
 
@@ -83,6 +102,15 @@ def main(script_args, training_args, model_args):
     else:
         dataset = load_from_disk(script_args.dataset_name)
 
+    def preprocess_function(examples):
+        prompt = ""
+        if training_args.system_prompt is not None:
+            prompt = prompt + training_args.system_prompt + "\n"
+        prompt = prompt + examples["prompt"]
+        return {"prompt": prompt}
+
+    dataset = dataset.map(preprocess_function)
+
     ################
     # Load tokenizer
     ################
@@ -90,6 +118,8 @@ def main(script_args, training_args, model_args):
         model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code, use_fast=True
     )
     tokenizer.padding_side = "left"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     ###################
     # Model init kwargs

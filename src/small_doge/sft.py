@@ -31,7 +31,6 @@ import trl
 from trl import (
     ModelConfig,
     ScriptArguments,
-    SFTConfig,
     SFTTrainer,
     TrlParser,
     get_kbit_device_map,
