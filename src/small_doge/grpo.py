@@ -16,7 +16,7 @@ import logging
 import os
 import re
 import sys
-from typing import Dict
+from typing import Dict, Optional
 from dataclasses import dataclass, field
 
 import datasets
@@ -30,7 +30,15 @@ from transformers.trainer_utils import get_last_checkpoint
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
 from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
-from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
+import trl
+from trl import (
+    ModelConfig,
+    ScriptArguments,
+    GRPOConfig,
+    GRPOTrainer,
+    TrlParser,
+    get_peft_config,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -89,6 +97,19 @@ class GRPOScriptArguments(ScriptArguments):
     repetition_max_penalty: float = field(
         default=-1.0,
         metadata={"help": "Maximum (negative) penalty for for repetition penalty reward"},
+    )
+
+
+@dataclass
+class GRPOConfig(trl.GRPOConfig):
+    """
+    args for small-doge GRPO
+    """
+
+    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
+    system_prompt: Optional[str] = field(
+        default=None,
+        metadata={"help": "The optional system prompt to use."},
     )
 
 
@@ -379,7 +400,11 @@ def get_repetition_penalty_reward(ngram_size: int, max_penalty: float):
     return repetition_penalty_reward
 
 
-def main(script_args, training_args, model_args):
+def main(
+    script_args: GRPOScriptArguments,
+    training_args: GRPOConfig,
+    model_args: ModelConfig,
+):
     # Set seed for reproducibility
     set_seed(training_args.seed)
 
@@ -424,11 +449,11 @@ def main(script_args, training_args, model_args):
 
     def preprocess_function(example):
         prompt = []
-    
-        prompt.append({"role": "system", "content": "As an assistant, you need to thoroughly explore the problem through precise thinking process before providing the final accurate solution. The thinking process includes Analysis, First, Second, Next, Reflection, Finally and Summarizing behavioral steps to develop a well-considered thought process. Please structure your response into two main sections: Thought and Solution. In the Thought section, detail your reasoning process using the specified format: <|begin_of_thought|> {**Analysis:**\\n\\n**First:**\\n\\n**Second:**\\n\\n**Next:**\\n\\n**Reflection:**\\n\\n**Finally:**\\n\\n**Summarizing:**} <|end_of_thought|>. The solution should remain a logical, accurate, concise expression style and detail necessary step needed to reach the conclusion, formatted as follows: <|begin_of_solution|> {**Solution:**} <|end_of_solution|>."})
+        if training_args.system_prompt is not None:
+            prompt.append({"role": "system", "content": training_args.system_prompt})
         prompt.append({"role": "user", "content": example["problem"]})
         return {"prompt": prompt}
-    
+
     dataset = dataset.map(preprocess_function)
 
     for split in dataset:
