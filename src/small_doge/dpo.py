@@ -29,10 +29,9 @@ from transformers.trainer_utils import get_last_checkpoint
 from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
 import trl
 from trl import (
-    DPOConfig,
-    DPOTrainer,
     ModelConfig,
     ScriptArguments,
+    DPOTrainer,
     TrlParser,
     get_kbit_device_map,
     get_peft_config,

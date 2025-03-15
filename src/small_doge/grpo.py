@@ -34,7 +34,6 @@ import trl
 from trl import (
     ModelConfig,
     ScriptArguments,
-    GRPOConfig,
     GRPOTrainer,
     TrlParser,
     get_peft_config,
