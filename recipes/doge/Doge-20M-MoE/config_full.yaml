@@ -36,7 +36,6 @@ model_config:
   is_moe: True
   num_experts: 1024
   num_experts_per_tok: 16
-  expert_retrieval_size: 64
 
 model_name_or_path: SmallDoge/Doge-20M
 torch_dtype: bfloat16

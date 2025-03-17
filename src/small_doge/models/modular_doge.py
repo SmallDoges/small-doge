@@ -161,8 +161,6 @@ class DogeConfig(PretrainedConfig):
             Number of Experts for the Cross Domain Mixture of Experts.
         num_experts_per_tok (`int`, *optional*, defaults to 8):
             Number of selected experts to route per-token.
-        expert_retrieval_size (`int`, *optional*, defaults to 64):
-            Dimension of the Expert retrieval states for calculating the dot product of query and key to determine the expert index.
 
     ```python
     >>> from transformers import DogeConfig, DogeModel
@@ -189,6 +187,9 @@ class DogeConfig(PretrainedConfig):
         "layers.*.mlp.gate_proj": "colwise",
         "layers.*.mlp.up_proj": "colwise",
         "layers.*.mlp.down_proj": "rowwise",
+        "layers.*.feed_forward.router_gate": "colwise",
+        "layers.*.feed_forward.down_embed": "rowwise",
+        "layers.*.feed_forward.up_embed": "rowwise",
     }
 
     def __init__(
@@ -218,7 +219,6 @@ class DogeConfig(PretrainedConfig):
         is_moe=False,
         num_experts=2048,
         num_experts_per_tok=8,
-        expert_retrieval_size=64,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -244,7 +244,6 @@ class DogeConfig(PretrainedConfig):
         self.is_moe = is_moe
         self.num_experts = num_experts
         self.num_experts_per_tok = num_experts_per_tok
-        self.expert_retrieval_size = expert_retrieval_size
 
         # Validate the correctness of rotary position embeddings parameters
         # BC: if there is a 'type' field, copy it it to 'rope_type'.
@@ -594,9 +593,8 @@ class DogeCDMoE(DogeMLP):
         self.top_k = config.num_experts_per_tok
         self.num_keys = int(math.sqrt(self.num_experts))
 
-        # queries and keys for retrieval experts
-        self.queries_proj = nn.Linear(self.hidden_dim, self.expert_retrieval_dim, bias=False)
-        self.keys = nn.Parameter(torch.zeros(2, self.expert_retrieval_dim // 2, self.num_keys))
+        # router gate for retrieval experts
+        self.router_gate = nn.Linear(self.hidden_dim, self.num_keys * 2)
 
         # experts
         self.down_embed = nn.Embedding(self.num_experts, self.hidden_dim)
@@ -609,18 +607,16 @@ class DogeCDMoE(DogeMLP):
     ) -> torch.Tensor:
         bsz, seq_len, _ = hidden_states.shape
 
-        # get routing weights with queries and keys
-        queries = self.queries_proj(hidden_states).view(2, bsz * seq_len, -1)
-        routing_weights = torch.matmul(queries, self.keys)
+        # get routing weights with router gate
+        routing_weights = self.router_gate(hidden_states).view(2, bsz * seq_len, -1)
 
         # get experts with the highest routing weights
-        (scores_x, scores_y), (indices_x, indices_y) = routing_weights.topk(self.top_k, dim=-1)
+        (scores_x, scores_y), (indices_x, indices_y) = [w.topk(self.num_keys, dim=-1) for w in routing_weights]
         all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
-        all_scores = all_scores.view(*scores_x.shape[:-1], -1)
-        all_indices = (indices_x.unsqueeze(-1) * self.num_keys) + indices_y.unsqueeze(-2)
-        all_indices = all_indices.view(*indices_x.shape[:-1], -1)
-        scores, pk_indices = all_scores.topk(self.top_k, dim=-1)
-        indices = all_indices.gather(-1, pk_indices)
+        all_indices = indices_x.unsqueeze(-1) * self.num_keys + indices_y.unsqueeze(-2)
+        all_scores = all_scores.view(*all_scores.shape[:-2], -1)
+        all_indices = all_indices.view(*all_indices.shape[:-2], -1)
+        scores, indices = all_scores.topk(self.top_k, dim=-1)
         down_embed = self.down_embed(indices).transpose(1, 2)
         up_embed = self.up_embed(indices)
 
