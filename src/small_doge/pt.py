@@ -47,12 +47,9 @@ logger = logging.getLogger(__name__)
 
 def set_moe_warmup_phase(model: DogeForCausalLM):
     MoE_params = [
-        r"^model\.layers\.\d+\.feed_forward\.queries_proj\.weight$",
-        r"^model\.layers\.\d+\.feed_forward\.keys$",
+        r"^model\.layers\.\d+\.feed_forward\.router_gate\.weight$",
         r"^model\.layers\.\d+\.feed_forward\.down_embed\.weight$",
         r"^model\.layers\.\d+\.feed_forward\.up_embed\.weight$",
-        r"^model\.layers\.\d+\.feed_forward\.mlp_scaling$",
-        r"^model\.layers\.\d+\.feed_forward\.moe_scaling$",
     ]
 
     # Freeze all parameters first
