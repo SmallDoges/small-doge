@@ -28,10 +28,11 @@ dataset_configs:
 max_prompt_length: 512
 max_completion_length: 1024
 packing: true
+system_prompt: "As an assistant, you need to thoroughly explore the problem through precise thinking process before providing the final accurate solution. The thinking process includes Analysis, First, Second, Next, Reflection, Finally and Summarizing behavioral steps to develop a well-considered thought process. Please structure your response into two main sections: Thought and Solution. In the Thought section, detail your reasoning process using the specified format: <|begin_of_thought|> {**Analysis:**\\n\\n**First:**\\n\\n**Second:**\\n\\n**Next:**\\n\\n**Reflection:**\\n\\n**Finally:**\\n\\n**Summarizing:**} <|end_of_thought|>. The solution should remain a logical, accurate, concise expression style and detail necessary step needed to reach the conclusion, formatted as follows: <|begin_of_solution|> {**Solution:**} <|end_of_solution|>."
 
 # GRPO trainer config
 # If you are using vllm, please comment out preprocessing_num_workers and use num_processes
-preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
+preprocessing_num_workers: 1 # Equal to the number of GPUs you are using
 # Num processes is less by 1 as vLLM is using 1 GPU
 # num_processes: 7
 seed: 233
