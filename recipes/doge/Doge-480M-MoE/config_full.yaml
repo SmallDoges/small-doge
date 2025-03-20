@@ -46,7 +46,7 @@ dataset_configs:
 - all
 
 # PT trainer arguments
-preprocessing_num_workers: 1 # Equal to the number of Gpus you are using
+preprocessing_num_workers: 1 # Equal to the number of GPUs you are using
 seed: 233
 do_train: True
 max_steps: 24000
