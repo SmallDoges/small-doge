@@ -485,7 +485,7 @@ class DogeCDMoE(DogeMLP):
         self.num_keys = int(math.sqrt(self.num_experts))
 
         # router gate for retrieval experts
-        self.router_gate = nn.Linear(self.hidden_dim, self.num_keys * 2)
+        self.router_gate = nn.Linear(self.hidden_dim, self.num_keys * 2, bias=False)
 
         # experts
         self.down_embed = nn.Embedding(self.num_experts, self.hidden_dim)
