@@ -588,13 +588,12 @@ class DogeCDMoE(DogeMLP):
         self.hidden_dim = config.hidden_size
         self.act_fn = ACT2FN[config.hidden_act]
 
-        self.expert_retrieval_dim = config.expert_retrieval_size
         self.num_experts = config.num_experts
         self.top_k = config.num_experts_per_tok
         self.num_keys = int(math.sqrt(self.num_experts))
 
         # router gate for retrieval experts
-        self.router_gate = nn.Linear(self.hidden_dim, self.num_keys * 2)
+        self.router_gate = nn.Linear(self.hidden_dim, self.num_keys * 2, bias=False)
 
         # experts
         self.down_embed = nn.Embedding(self.num_experts, self.hidden_dim)
