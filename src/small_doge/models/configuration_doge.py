@@ -147,9 +147,9 @@ class DogeConfig(PretrainedConfig):
         "layers.*.feed_forward.gate_proj": "colwise",
         "layers.*.feed_forward.up_proj": "colwise",
         "layers.*.feed_forward.down_proj": "rowwise",
-        "layers.*.feed_forward.router_gate": "colwise",
-        "layers.*.feed_forward.down_embed": "rowwise",
-        "layers.*.feed_forward.up_embed": "rowwise",
+        "layers.*.feed_forward.router_gate": "colwise_rep",
+        "layers.*.feed_forward.down_embed": "rowwise_rep",
+        "layers.*.feed_forward.up_embed": "rowwise_rep",
     }
 
     def __init__(
@@ -177,8 +177,8 @@ class DogeConfig(PretrainedConfig):
         keep_window_size=2048,
         dynamic_mask_ratio=0.0,
         is_moe=False,
-        num_experts=2048,
-        num_experts_per_tok=8,
+        num_experts=16384,
+        num_experts_per_tok=64,
         **kwargs,
     ):
         self.vocab_size = vocab_size
