@@ -7,12 +7,12 @@ report_to:
 - wandb
 save_strategy: steps
 save_steps: 100
-output_dir: data/Doge-160M-MoE
+output_dir: data/Doge-480M-MoE
 overwrite_output_dir: true
 push_to_hub: true
 private: true
 # token: <your-token>
-hub_model_id: Doge-160M-MoE
+hub_model_id: Doge-480M-MoE
 hub_strategy: every_save
 
 # Model arguments
