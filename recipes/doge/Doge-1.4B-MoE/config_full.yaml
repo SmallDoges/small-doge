@@ -42,8 +42,7 @@ torch_dtype: bfloat16
 
 # Data training arguments
 dataset_name: ./datasets/pt_dataset
-dataset_configs:
-- all
+dataset_config: default
 
 # PT trainer arguments
 preprocessing_num_workers: 1 # Equal to the number of GPUs you are using

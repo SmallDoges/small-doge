@@ -7,12 +7,12 @@ report_to:
 - wandb
 save_strategy: steps
 save_steps: 100
-output_dir: data/Doge-60M-Distill
+output_dir: data/Doge-60M-Reason-Distill
 overwrite_output_dir: true
 push_to_hub: true
 private: true
 # token: <your-token>
-hub_model_id: Doge-60M-Distill
+hub_model_id: Doge-60M-Reason-Distill
 hub_strategy: every_save
 
 # Model arguments
@@ -23,8 +23,7 @@ torch_dtype: bfloat16
 
 # Data training arguments
 dataset_name: ./datasets/distill_dataset
-dataset_configs:
-- all
+dataset_config: default
 max_seq_length: 4096
 packing: true
 system_prompt: "As an assistant, you need to thoroughly explore the problem through precise thinking process before providing the final accurate solution. The thinking process includes Analysis, First, Second, Next, Reflection, Finally and Summarizing behavioral steps to develop a well-considered thought process. Please structure your response into two main sections: Thought and Solution. In the Thought section, detail your reasoning process using the specified format: <|begin_of_thought|> {**Analysis:**\\n\\n**First:**\\n\\n**Second:**\\n\\n**Next:**\\n\\n**Reflection:**\\n\\n**Finally:**\\n\\n**Summarizing:**} <|end_of_thought|>. The solution should remain a logical, accurate, concise expression style and detail necessary step needed to reach the conclusion, formatted as follows: <|begin_of_solution|> {**Solution:**} <|end_of_solution|>."

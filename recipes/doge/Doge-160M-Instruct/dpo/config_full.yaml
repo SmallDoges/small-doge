@@ -16,15 +16,14 @@ hub_model_id: Doge-160M-Instruct-DPO
 hub_strategy: every_save
 
 # Model arguments
-model_name_or_path: SmallDoge/Doge-160M-SFT
+model_name_or_path: SmallDoge/Doge-160M-Instruct-SFT
 model_revision: main
 trust_remote_code: True
 torch_dtype: bfloat16
 
 # Data training arguments
 dataset_name: ./datasets/dpo_dataset
-dataset_configs:
-- all
+dataset_config: default
 max_length: 1024
 max_prompt_length: 512
 

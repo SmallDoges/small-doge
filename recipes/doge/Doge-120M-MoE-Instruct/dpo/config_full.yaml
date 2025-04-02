@@ -23,8 +23,7 @@ torch_dtype: bfloat16
 
 # Data training arguments
 dataset_name: ./datasets/dpo_dataset
-dataset_configs:
-- all
+dataset_config: default
 max_length: 1024
 max_prompt_length: 512
 
