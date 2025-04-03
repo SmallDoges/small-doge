@@ -102,8 +102,8 @@ def main(
     else:
         dataset = load_from_disk(script_args.dataset_name)
 
-    def preprocess_function(examples):
-        messages: list = examples["messages"]
+    def preprocess_function(example):
+        messages: list = example["messages"]
         if training_args.system_prompt is not None:
             messages.insert(0, {"role": "system", "content": training_args.system_prompt})
         return {"messages": messages}

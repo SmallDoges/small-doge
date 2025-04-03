@@ -102,11 +102,10 @@ def main(
     else:
         dataset = load_from_disk(script_args.dataset_name)
 
-    def preprocess_function(examples):
-        prompt = ""
+    def preprocess_function(example):
+        prompt: list = example["prompt"]
         if training_args.system_prompt is not None:
-            prompt = prompt + training_args.system_prompt + "\n"
-        prompt = prompt + examples["prompt"]
+            prompt.insert(0, {"role": "system", "content": training_args.system_prompt})
         return {"prompt": prompt}
 
     dataset = dataset.map(preprocess_function)
