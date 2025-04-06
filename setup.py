@@ -63,7 +63,7 @@ _deps = [
     "sentencepiece>=0.1.99",
     "tensorboard>=2.6.0",
     "torch>=2.5.1",
-    "transformers @ git+https://github.com/LoserCheems/transformers.git@add-doge-model",
+    "transformers",
     "trl",
     "vllm>=0.7.1",
     "wandb>=0.19.1",
