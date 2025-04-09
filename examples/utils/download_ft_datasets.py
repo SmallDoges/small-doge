@@ -43,6 +43,8 @@ def main(args):
     download_open_thoughts(args.save_dir, args.cache_dir, args.num_proc)
     download_openr1_math(args.save_dir, args.cache_dir, args.num_proc)
 
+    # For Medical fine-tuning
+    download_huatuo_encyclopedia_qa(args.save_dir, args.cache_dir, args.num_proc)
 
 if __name__ == "__main__":
 
