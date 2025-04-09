@@ -92,6 +92,28 @@ def openr1_math_map(example):
             ],
         }
 
+def huatuo_map(example):
+    system_prompt = "你是一个医学助手，能够回答用户提出的医学问题。请根据用户的问题，给出准确的医学建议和解答。"
+    
+    questions = example["questions"]
+    answer = example["answers"][0] if isinstance(example["answers"], list) else example["answers"]
+
+    primary_question = questions[0][0]
+    user_content = primary_question
+
+    if len(questions) > 1 or (len(questions) == 1 and len(questions[0]) > 1):
+        user_content = "、".join([q for sublist in questions for q in sublist])
+    
+    conversations = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+            {"role": "assistant", "content": answer},
+        ]
+
+    example["messages"] = conversations
+    return example
+
+
 
 def process_smoltalk(tokenizer, datasets_dir, num_proc):
     dataset = load_from_disk(datasets_dir + '/smoltalk')
@@ -166,6 +188,33 @@ def process_openr1_math(tokenizer, datasets_dir, num_proc):
     dataset.save_to_disk(datasets_dir + '/openr1_math_processed')
     return "openr1_math_processed"
 
+def process_huatuo(tokenizer, datasets_dir, num_proc):
+    dataset = load_from_disk(datasets_dir + '/datahuatuo_encyclopedia_qa')
+    columns = dataset['train'].column_names if 'train' in dataset else dataset.column_names
+    dataset = dataset.map(
+        huatuo_map,
+        num_proc=num_proc,
+        remove_columns=columns,
+        desc="Processing huatuo"
+    )
+    
+    if is_apply_chat_template:
+        dataset = dataset.map(
+            lambda x: {"text": tokenizer.apply_chat_template(x["messages"], tokenize=False)},
+            num_proc=num_proc,
+            desc="Applying chat template to huatuo"
+        )
+    else:
+        dataset = dataset.map(
+            lambda x: {"text": x["messages"]},
+            num_proc=num_proc,
+            desc="Converting messages to text format for huatuo"
+        )
+    
+    print(dataset)
+    dataset.save_to_disk(datasets_dir + '/huatuo_processed')
+    return "huatuo_processed"
+
 
 def main(args):
 
@@ -182,6 +231,9 @@ def main(args):
 
     # Process openr1-math dataset
     process_openr1_math(tokenizer, args.datasets_dir, args.num_proc)
+
+    # Process huatuo dataset
+    process_huatuo(tokenizer, args.datasets_dir, args.num_proc)
 
 
 if __name__ == '__main__':

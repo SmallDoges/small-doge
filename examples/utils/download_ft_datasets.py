@@ -25,6 +25,12 @@ def download_openr1_math(save_dir, cache_dir, num_proc):
     print(dataset)
     dataset.save_to_disk(save_dir + "/openr1_math", num_proc=num_proc)
 
+def download_huatuo_encyclopedia_qa(save_dir, cache_dir, num_proc):
+    # Download huatuo-encyclopedia-qa dataset
+    dataset = load_dataset("FreedomIntelligence/huatuo_encyclopedia_qa", num_proc=num_proc, cache_dir=cache_dir)
+    print(dataset)
+    dataset.save_to_disk(save_dir + "/huatuo_encyclopedia_qa", num_proc=num_proc)
+
 # You can also download other datasets
 
 def main(args):
