@@ -189,7 +189,7 @@ def process_openr1_math(tokenizer, datasets_dir, num_proc):
     return "openr1_math_processed"
 
 def process_huatuo(tokenizer, datasets_dir, num_proc):
-    dataset = load_from_disk(datasets_dir + '/datahuatuo_encyclopedia_qa')
+    dataset = load_from_disk(datasets_dir + '/huatuo_encyclopedia_qa')
     columns = dataset['train'].column_names if 'train' in dataset else dataset.column_names
     dataset = dataset.map(
         huatuo_map,
