@@ -507,7 +507,8 @@ class DogeCDMoE(DogeMLP):
         all_indices = indices_x.unsqueeze(-1) * self.num_keys + indices_y.unsqueeze(-2)
         all_scores = all_scores.view(*all_scores.shape[:-2], -1)
         all_indices = all_indices.view(*all_indices.shape[:-2], -1)
-        scores, indices = all_scores.topk(self.top_k, dim=-1)
+        scores, position_indices = all_scores.topk(self.top_k, dim=-1)
+        indices = all_indices.gather(-1, position_indices)
         down_embed = self.down_embed(indices)
         up_embed = self.up_embed(indices)
 
