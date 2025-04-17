@@ -9,12 +9,14 @@ if [[ $MODEL =~ Instruct$ ]]; then
     "evaluation/instruct/doge_instruct.txt" \
     --custom-tasks evaluation/instruct/tasks.py \
     --override-batch-size 1 \
+    --use-chat-template \
     --output-dir $OUTPUT_DIR
 elif [[ $MODEL =~ Reason$ ]]; then
     lighteval vllm $MODEL_ARGS \
     "evaluation/reason/doge_reason.txt" \
     --custom-tasks evaluation/reason/tasks.py \
     --override-batch-size 1 \
+    --use-chat-template \
     --output-dir $OUTPUT_DIR
 else
     lighteval accelerate $MODEL_ARGS \
