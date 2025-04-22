@@ -665,6 +665,7 @@ class DogeDecoderLayer(nn.Module):
         hidden_states = self.post_residual(residual, hidden_states)
 
         outputs = (hidden_states,)
+
         if output_attentions:
             outputs += (self_attn_weights,)
 
@@ -907,6 +908,7 @@ class DogeModel(DogePreTrainedModel):
                     position_ids,
                     past_key_values,
                     output_attentions,
+                    output_router_logits,
                     use_cache,
                     cache_position,
                     position_embeddings,
@@ -918,6 +920,7 @@ class DogeModel(DogePreTrainedModel):
                     position_ids=position_ids,
                     past_key_value=past_key_values,
                     output_attentions=output_attentions,
+                    output_router_logits=output_router_logits,
                     use_cache=use_cache,
                     cache_position=cache_position,
                     position_embeddings=position_embeddings,
@@ -1174,7 +1177,7 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
             aux_loss = load_balancing_loss_func(
                 outputs.router_logits,
                 self.num_experts,
-                math.sqrt(self.num_experts),
+                int(math.sqrt(self.num_experts)),
                 self.num_experts_per_tok,
                 attention_mask,
             )
