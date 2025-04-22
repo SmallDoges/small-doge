@@ -22,6 +22,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
 import math
 from typing import Callable, List, Optional, Tuple, Union
 from packaging import version
@@ -34,7 +35,7 @@ from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache, DynamicCache, StaticCache
 from transformers.generation import GenerationMixin
 from transformers.modeling_attn_mask_utils import AttentionMaskConverter
-from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
+from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast, MoeModelOutputWithPast, MoeCausalLMOutputWithPast
 from transformers.modeling_rope_utils import ROPE_INIT_FUNCTIONS
 from transformers.modeling_utils import PreTrainedModel
 from transformers.processing_utils import Unpack
@@ -472,6 +473,95 @@ class DogeMLP(nn.Module):
         return hidden_states
 
 
+def load_balancing_loss_func(
+    router_logits: Union[torch.Tensor, Tuple[torch.Tensor], None],
+    num_experts: Optional[int] = None,
+    num_keys: Optional[int] = None,
+    top_k: int = 2,
+    attention_mask: Optional[torch.Tensor] = None,
+) -> Union[torch.Tensor, int]:
+    r"""
+    Computes auxiliary load balancing loss as in Switch Transformer - implemented in Pytorch.
+
+    See Switch Transformer (https://arxiv.org/abs/2101.03961) for more details. This function implements the loss
+    function presented in equations (4) - (6) of the paper. It aims at penalizing cases where the routing between
+    experts is too unbalanced.
+
+    Args:
+        router_logits:
+            Logits from the `router_gate`, should be a tuple of model.config.num_hidden_layers tensors of
+            shape [2, batch_size * sequence_length, num_keys].
+        num_experts:
+            Number of experts
+        num_keys:
+            Number of keys
+        top_k:
+            The number of experts to route per-token, can be also interpreted as the `top-k` routing
+            parameter.
+        attention_mask (`torch.Tensor`, *optional*):
+            The attention_mask used in forward function
+            shape [batch_size X sequence_length] if not None.
+
+    Returns:
+        The auxiliary loss.
+    """
+    if router_logits is None or not isinstance(router_logits, tuple):
+        return 0
+    
+    compute_device = router_logits[0].device
+    concatenated_router_logits = torch.cat([layer_output.to(compute_device) for layer_output in router_logits], dim=1)
+    batch_tokens = concatenated_router_logits.shape[1]  # batch_size * seq_len * num_layers
+
+    x_logits, y_logits = concatenated_router_logits[0], concatenated_router_logits[1]
+    scores_x, indices_x = torch.topk(x_logits, num_keys, dim=-1)
+    scores_y, indices_y = torch.topk(y_logits, num_keys, dim=-1)
+
+    all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
+    all_indices = indices_x.unsqueeze(-1) * num_keys + indices_y.unsqueeze(-2)
+    all_scores = all_scores.view(*all_scores.shape[:-2], -1)
+    all_indices = all_indices.view(*all_indices.shape[:-2], -1)
+
+    scores, position_indices = all_scores.topk(top_k, dim=-1)
+    expert_indices = all_indices.gather(-1, position_indices)
+
+    expert_weights = F.softmax(scores, dim=-1)
+
+    expert_mask = torch.zeros(batch_tokens, top_k, num_experts, device=compute_device)
+    for i in range(top_k):
+        expert_mask[:, i].scatter_(1, expert_indices[:, i:i+1], 1)
+
+    if attention_mask is None:
+        # Compute the percentage of tokens routed to each experts
+        tokens_per_expert = torch.mean(expert_mask.float(), dim=(0, 1))
+
+        # Compute the average probability of routing to these experts
+        router_prob_per_expert = torch.zeros(num_experts, device=compute_device)
+        for i in range(top_k):
+            one_hot = F.one_hot(expert_indices[:, i], num_experts).float()
+            router_prob_per_expert += torch.mean(one_hot * expert_weights[:, i:i+1], dim=0)
+    else:
+        batch_size, sequence_length = attention_mask.shape
+        num_hidden_layers = batch_tokens // (batch_size * sequence_length)
+
+        # Compute the mask that masks all padding tokens as 0 with the same shape of expert_mask
+        reshaped_mask = attention_mask.repeat(num_hidden_layers, 1).view(-1)
+        expanded_mask = reshaped_mask.unsqueeze(-1).unsqueeze(-1).expand(-1, top_k, num_experts)
+
+        # Compute the percentage of tokens routed to each experts
+        masked_expert_mask = expert_mask.float() * expanded_mask
+        tokens_per_expert = torch.sum(masked_expert_mask, dim=(0, 1)) / torch.sum(expanded_mask)
+
+        # Compute the average probability of routing to these experts
+        router_prob_per_expert = torch.zeros(num_experts, device=compute_device)
+        for i in range(top_k):
+            one_hot = F.one_hot(expert_indices[:, i], num_experts).float()
+            weighted = one_hot * expert_weights[:, i:i+1] * reshaped_mask.unsqueeze(-1)
+            router_prob_per_expert += torch.sum(weighted, dim=0) / torch.sum(reshaped_mask)
+    
+    overall_loss = torch.sum(tokens_per_expert * router_prob_per_expert)
+    return overall_loss * num_experts
+
+
 class DogeCDMoE(DogeMLP):
     """Cross Domain Mixture of Experts from 'Wonderful Matrices' paper."""
 
@@ -518,7 +608,7 @@ class DogeCDMoE(DogeMLP):
         experts_states = torch.matmul(experts_weights.view(bsz * seq_len, 1, -1), up_embed).view(bsz, seq_len, -1)
         hidden_states = self.down_proj(self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states))
         hidden_states = hidden_states + experts_states
-        return hidden_states
+        return hidden_states, routing_weights
 
 
 class DogeDecoderLayer(nn.Module):
@@ -541,11 +631,37 @@ class DogeDecoderLayer(nn.Module):
         position_ids: Optional[torch.LongTensor] = None,
         past_key_value: Optional[Cache] = None,
         output_attentions: Optional[bool] = False,
+        output_router_logits: Optional[bool] = False,
         use_cache: Optional[bool] = False,
         cache_position: Optional[torch.LongTensor] = None,
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,  # necessary, but kept here for BC
         **kwargs,
     ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
+        """
+        Args:
+            hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
+            attention_mask (`torch.FloatTensor`, *optional*): attention mask of size
+                `(batch, sequence_length)` where padding elements are indicated by 0.
+            output_attentions (`bool`, *optional*):
+                Whether or not to return the attentions tensors of all attention layers. See `attentions` under
+                returned tensors for more detail.
+            output_router_logits (`bool`, *optional*):
+                Whether or not to return the logits of all the routers. They are useful for computing the router loss,
+                and should not be returned during inference.
+            use_cache (`bool`, *optional*):
+                If set to `True`, `past_key_values` key value states are returned and can be used to speed up decoding
+                (see `past_key_values`).
+            past_key_value (`Tuple(torch.FloatTensor)`, *optional*): cached past key and value projection states
+            cache_position (`torch.LongTensor` of shape `(sequence_length)`, *optional*):
+                Indices depicting the position of the input sequence tokens in the sequence.
+            position_embeddings (`Tuple[torch.FloatTensor, torch.FloatTensor]`, *optional*):
+                Tuple containing the cosine and sine positional embeddings of shape `(batch_size, seq_len, head_dim)`,
+                with `head_dim` being the embedding dimension of each attention head.
+            kwargs (`dict`, *optional*):
+                Arbitrary kwargs to be ignored, used for FSDP and other methods that injects code
+                into the model
+        """
+
         # sequence transformation
         residual = hidden_states
         hidden_states = self.pre_layernorm(hidden_states)
@@ -568,12 +684,19 @@ class DogeDecoderLayer(nn.Module):
         residual = hidden_states
         hidden_states = self.post_layernorm(hidden_states)
         hidden_states = self.feed_forward(hidden_states)
+        if isinstance(hidden_states, tuple):
+            hidden_states, router_logits = hidden_states
+        else:
+            router_logits = None
         hidden_states = F.dropout(hidden_states, p=self.hidden_dropout, training=self.training)
         hidden_states = self.post_residual(residual, hidden_states)
 
         outputs = (hidden_states,)
         if output_attentions:
             outputs += (self_attn_weights,)
+
+        if output_router_logits:
+            outputs += (router_logits,)
 
         return outputs
 
@@ -689,6 +812,9 @@ DOGE_INPUTS_DOCSTRING = r"""
         output_hidden_states (`bool`, *optional*):
             Whether or not to return the hidden states of all layers. See `hidden_states` under returned tensors for
             more detail.
+        output_router_logits (`bool`, *optional*):
+            Whether or not to return the logits of all the routers. They are useful for computing the router loss, and
+            should not be returned during inference.
         return_dict (`bool`, *optional*):
             Whether or not to return a [`~utils.ModelOutput`] instead of a plain tuple.
         cache_position (`torch.LongTensor` of shape `(sequence_length)`, *optional*):
@@ -744,16 +870,15 @@ class DogeModel(DogePreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+        output_router_logits: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
         **kwargs,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
+    ) -> Union[Tuple, MoeModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if (input_ids is None) ^ (inputs_embeds is not None):
             raise ValueError("You cannot specify both input_ids and inputs_embeds")
@@ -791,6 +916,7 @@ class DogeModel(DogePreTrainedModel):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
+        all_router_logits = () if output_router_logits else None
 
         for decoder_layer in self.layers[: self.config.num_hidden_layers]:
             if output_hidden_states:
@@ -798,7 +924,7 @@ class DogeModel(DogePreTrainedModel):
 
             if self.gradient_checkpointing and self.training:
                 layer_outputs = self._gradient_checkpointing_func(
-                    decoder_layer.__call__,
+                    partial(decoder_layer.__call__, **kwargs),
                     hidden_states,
                     causal_mask,
                     position_ids,
@@ -832,13 +958,16 @@ class DogeModel(DogePreTrainedModel):
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
 
-        output = BaseModelOutputWithPast(
+        if output_router_logits and layer_outputs[-1] is not None:
+                all_router_logits += (layer_outputs[-1],)
+
+        return MoeModelOutputWithPast(
             last_hidden_state=hidden_states,
             past_key_values=past_key_values if use_cache else None,
             hidden_states=all_hidden_states,
             attentions=all_self_attns,
+            router_logits=all_router_logits,
         )
-        return output if return_dict else output.to_tuple()
 
     def _update_causal_mask(
         self,
@@ -956,6 +1085,10 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
+        self.router_aux_loss_coef = config.router_aux_loss_coef
+        self.num_experts = config.num_experts
+        self.num_experts_per_tok = config.num_experts_per_tok
+
         # Initialize weights and apply final processing
         self.post_init()
 
@@ -990,11 +1123,11 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+        output_router_logits: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
         logits_to_keep: Union[int, torch.Tensor] = 0,
         **kwargs: Unpack[LossKwargs],
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+    ) -> Union[Tuple, MoeCausalLMOutputWithPast]:
         r"""
         Args:
             labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -1028,13 +1161,15 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
         "Hey, are you conscious? Can you talk to me?\nI'm not conscious, but I can talk to you."
         ```"""
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_router_logits = (
+            output_router_logits if output_router_logits is not None else self.config.output_router_logits
+        )
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # decoder output consists of (dec_features, layer_state, dec_hidden, dec_attn)
-        outputs = self.model(
+        outputs: MoeModelOutputWithPast = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -1043,12 +1178,12 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
+            output_router_logits=output_router_logits,
             cache_position=cache_position,
             **kwargs,
         )
 
-        hidden_states = outputs[0]
+        hidden_states = outputs.last_hidden_state
         # only compute necessary logits, and do not upcast them to float if we are not computing the loss
         slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
         logits = self.lm_head(hidden_states[:, slice_indices, :])
@@ -1057,16 +1192,26 @@ class DogeForCausalLM(DogePreTrainedModel, GenerationMixin):
         if labels is not None:
             loss = self.loss_function(logits=logits, labels=labels, vocab_size=self.vocab_size, **kwargs)
 
-        if not return_dict:
-            output = (logits,) + outputs[1:]
-            return (loss,) + output if loss is not None else output
+        aux_loss = None
+        if output_router_logits:
+            aux_loss = load_balancing_loss_func(
+                outputs.router_logits,
+                self.num_experts,
+                math.sqrt(self.num_experts),
+                self.num_experts_per_tok,
+                attention_mask,
+            )
+            if labels is not None:
+                loss += self.router_aux_loss_coef * aux_loss.to(loss.device)  # make sure to reside in the same device
 
-        return CausalLMOutputWithPast(
+        return MoeCausalLMOutputWithPast(
             loss=loss,
+            aux_loss=aux_loss,
             logits=logits,
             past_key_values=outputs.past_key_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
+            router_logits=outputs.router_logits,
         )
 
 
@@ -1115,7 +1260,6 @@ class DogeForSequenceClassification(DogePreTrainedModel):
         use_cache: Optional[bool] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):
@@ -1123,9 +1267,8 @@ class DogeForSequenceClassification(DogePreTrainedModel):
             config.num_labels - 1]`. If `config.num_labels == 1` a regression loss is computed (Mean-Square loss), If
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        transformer_outputs = self.model(
+        transformer_outputs: MoeModelOutputWithPast = self.model(
             input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
@@ -1134,7 +1277,6 @@ class DogeForSequenceClassification(DogePreTrainedModel):
             use_cache=use_cache,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
         )
         hidden_states = transformer_outputs[0]
         logits = self.score(hidden_states)
@@ -1165,10 +1307,6 @@ class DogeForSequenceClassification(DogePreTrainedModel):
         loss = None
         if labels is not None:
             loss = self.loss_function(logits=logits, labels=labels, pooled_logits=pooled_logits, config=self.config)
-
-        if not return_dict:
-            output = (pooled_logits,) + transformer_outputs[1:]
-            return ((loss,) + output) if loss is not None else output
 
         return SequenceClassifierOutputWithPast(
             loss=loss,

@@ -179,6 +179,9 @@ class DogeConfig(PretrainedConfig):
         is_moe=False,
         num_experts=16384,
         num_experts_per_tok=64,
+        norm_topk_prob=False,
+        output_router_logits=False,
+        router_aux_loss_coef=0.001,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -204,6 +207,9 @@ class DogeConfig(PretrainedConfig):
         self.is_moe = is_moe
         self.num_experts = num_experts
         self.num_experts_per_tok = num_experts_per_tok
+        self.norm_topk_prob = norm_topk_prob
+        self.output_router_logits = output_router_logits
+        self.router_aux_loss_coef = router_aux_loss_coef
 
         # Validate the correctness of rotary position embeddings parameters
         # BC: if there is a 'type' field, copy it it to 'rope_type'.
