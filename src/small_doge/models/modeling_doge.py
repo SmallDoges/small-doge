@@ -482,55 +482,42 @@ def load_balancing_loss_func(
         return 0
     
     compute_device = router_logits[0].device
-    concatenated_router_logits = torch.cat([layer_output.to(compute_device) for layer_output in router_logits], dim=1)
-    batch_tokens = concatenated_router_logits.shape[1]  # batch_size * seq_len * num_layers
+    all_expert_indices = []
+    all_expert_weights = []
 
-    x_logits, y_logits = concatenated_router_logits[0], concatenated_router_logits[1]
-    scores_x, indices_x = torch.topk(x_logits, num_keys, dim=-1)
-    scores_y, indices_y = torch.topk(y_logits, num_keys, dim=-1)
+    for layer_router_logits in router_logits:
+        layer_router_logits = layer_router_logits.to(compute_device)
 
-    all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
-    all_indices = indices_x.unsqueeze(-1) * num_keys + indices_y.unsqueeze(-2)
-    all_scores = all_scores.view(*all_scores.shape[:-2], -1)
-    all_indices = all_indices.view(*all_indices.shape[:-2], -1)
-
-    scores, position_indices = all_scores.topk(top_k, dim=-1)
-    expert_indices = all_indices.gather(-1, position_indices)
-
-    expert_weights = F.softmax(scores, dim=-1)
-
-    expert_mask = torch.zeros(batch_tokens, top_k, num_experts, device=compute_device)
-    for i in range(top_k):
-        expert_mask[:, i].scatter_(1, expert_indices[:, i:i+1], 1)
-
-    if attention_mask is None:
-        # Compute the percentage of tokens routed to each experts
-        tokens_per_expert = torch.mean(expert_mask.float(), dim=(0, 1))
-
-        # Compute the average probability of routing to these experts
-        router_prob_per_expert = torch.zeros(num_experts, device=compute_device)
-        for i in range(top_k):
-            one_hot = F.one_hot(expert_indices[:, i], num_experts).float()
-            router_prob_per_expert += torch.mean(one_hot * expert_weights[:, i:i+1], dim=0)
-    else:
-        batch_size, sequence_length = attention_mask.shape
-        num_hidden_layers = batch_tokens // (batch_size * sequence_length)
-
-        # Compute the mask that masks all padding tokens as 0 with the same shape of expert_mask
-        reshaped_mask = attention_mask.repeat(num_hidden_layers, 1).view(-1)
-        expanded_mask = reshaped_mask.unsqueeze(-1).unsqueeze(-1).expand(-1, top_k, num_experts)
-
-        # Compute the percentage of tokens routed to each experts
-        masked_expert_mask = expert_mask.float() * expanded_mask
-        tokens_per_expert = torch.sum(masked_expert_mask, dim=(0, 1)) / torch.sum(expanded_mask)
-
-        # Compute the average probability of routing to these experts
-        router_prob_per_expert = torch.zeros(num_experts, device=compute_device)
-        for i in range(top_k):
-            one_hot = F.one_hot(expert_indices[:, i], num_experts).float()
-            weighted = one_hot * expert_weights[:, i:i+1] * reshaped_mask.unsqueeze(-1)
-            router_prob_per_expert += torch.sum(weighted, dim=0) / torch.sum(reshaped_mask)
+        (scores_x, scores_y), (indices_x, indices_y) = layer_router_logits.topk(num_keys, dim=-1)
     
+        all_scores = scores_x.unsqueeze(-1) + scores_y.unsqueeze(-2)
+        all_indices = indices_x.unsqueeze(-1) * num_keys + indices_y.unsqueeze(-2)
+        all_scores = all_scores.view(*all_scores.shape[:-2], -1)
+        all_indices = all_indices.view(*all_indices.shape[:-2], -1)
+
+        scores, position_indices = all_scores.topk(top_k, dim=-1)
+        expert_indices = all_indices.gather(-1, position_indices)
+
+        expert_weights = F.softmax(scores, dim=-1)
+
+        all_expert_indices.append(expert_indices)
+        all_expert_weights.append(expert_weights)
+    all_expert_indices = torch.cat(all_expert_indices, dim=0)
+    all_expert_weights = torch.cat(all_expert_weights, dim=0)
+
+    # Compute the percentage of tokens routed to each experts
+    expert_mask = F.one_hot(expert_indices, num_classes=num_experts).float()
+    weighted_mask = expert_mask * expert_weights.unsqueeze(-1)
+    tokens_per_expert = weighted_mask.sum(dim=[0, 1])
+    if attention_mask is not None:
+        valid_token_count = attention_mask.sum().item() * len(router_logits)
+        tokens_per_expert = tokens_per_expert / valid_token_count
+    else:
+        tokens_per_expert = tokens_per_expert / expert_indices.shape[0]
+
+    # Compute the average probability of routing to these experts
+    router_prob_per_expert = expert_mask.sum(dim=[0, 1]) / (expert_indices.shape[0] * top_k)
+
     overall_loss = torch.sum(tokens_per_expert * router_prob_per_expert)
     return overall_loss * num_experts
 
