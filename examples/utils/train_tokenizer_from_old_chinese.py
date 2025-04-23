@@ -20,7 +20,7 @@ from argparse import ArgumentParser
 from datasets import load_dataset, Dataset
 
 # make jsonl dataset to dataset
-def load_translation_dataset(dataset_path, num_proc, cache_dir="./cache")
+def load_translation_dataset(dataset_path, num_proc, cache_dir="./cache"):
     dataset = load_dataset('json', data_files=dataset_path, split='train', num_proc=num_proc, cache_dir=cache_dir)
     dataset.save_to_disk('./dataset', num_proc=num_proc)
     dataset = dataset["train"].select(range(1_000_000))
