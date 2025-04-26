@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
 from .api_config import API_SERVER_CONFIG
 from .app_config import APP_CONFIG
 from .db_config import DB_CONFIG
