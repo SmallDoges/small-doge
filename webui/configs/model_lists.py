@@ -31,3 +31,7 @@ INSTRUCT_MODEL_LIST = [
     "SmallDoge/Doge-160M-Instruct",
     "SmallDoge/Doge-320M-Instruct",
 ]
+
+# 可用的自定义模型列表
+CUSTOM_MODEL_LIST = [
+]

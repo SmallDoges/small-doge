@@ -1,0 +1,16 @@
+torch
+transformers
+gradio
+fastapi
+uvicorn
+pymysql
+langchain
+numpy
+pandas
+accelerate
+sentencepiece
+requests
+pydantic
+tqdm
+datasets
+tokenizers

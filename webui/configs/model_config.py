@@ -14,13 +14,16 @@
 # limitations under the License.
 
 
+import torch
+
 # 模型配置 (Model Configuration)
 # 此配置用于定义模型加载参数
 # This configuration is used for defining model loading parameters
 MODEL_CONFIG = {
     'model_name_or_path': 'Qwen/Qwen2.5-0.5B-Instruct',  # 模型名称或路径 (Model name or path)
-    'device_map': 'auto',  # 设备映射 (Device mapping)
-    'dtype': 'bfloat16',  # 数据类型 (Data type)
+    'trust_remote_code': True,  # 是否信任远程代码 (Whether to trust remote code)
+    'device_map': 'auto' if torch.cuda.is_available() else None,  # 设备映射 (Device mapping)
+    'torch_dtype': torch.bfloat16 if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8 else torch.float16,  # 数据类型 (Data type)
 }
 
 
