@@ -480,9 +480,9 @@ def load_balancing_loss_func(
     """
     if router_logits is None or not isinstance(router_logits, tuple):
         return 0
-    
-    compute_device = router_logits[0].device
+
     compute_dtype = router_logits[0].dtype
+    compute_device = router_logits[0].device
     all_expert_indices = []
     all_expert_weights = []
 
@@ -509,7 +509,7 @@ def load_balancing_loss_func(
     if attention_mask is None:
         # Compute the percentage of tokens routed to each experts
         all_expert_indices = all_expert_indices.view(-1)
-        tokens_per_expert = torch.zeros(num_experts, device=compute_device, dtype=compute_dtype)
+        tokens_per_expert = torch.zeros(num_experts, dtype=compute_dtype, device=compute_device)
         pad = torch.ones_like(all_expert_indices, dtype=compute_dtype, device=compute_device)
         tokens_per_expert = tokens_per_expert.scatter_add_(0, all_expert_indices, pad) / all_expert_indices.shape[0]
 
@@ -529,7 +529,7 @@ def load_balancing_loss_func(
         all_expert_indices = all_expert_indices.view(-1)[expert_attention_mask.bool()]
 
         # Compute the percentage of tokens routed to each experts
-        tokens_per_expert = torch.zeros(num_experts, device=compute_device)
+        tokens_per_expert = torch.zeros(num_experts, dtype=compute_dtype, device=compute_device)
         pad = torch.ones_like(all_expert_indices, dtype=compute_dtype, device=compute_device)
         tokens_per_expert = tokens_per_expert.scatter_add_(0, all_expert_indices, pad) / torch.sum(expert_attention_mask)
 
