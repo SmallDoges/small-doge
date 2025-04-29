@@ -19,8 +19,10 @@ from transformers.utils.import_utils import define_import_structure
 
 
 if TYPE_CHECKING:
-    from .configuration_doge import DogeConfig
-    from .modeling_doge import DogeForCausalLM, DogeForSequenceClassification, DogeModel, DogePreTrainedModel
+    from .doge.configuration_doge import DogeConfig
+    from .doge.modeling_doge import DogeForCausalLM, DogeForSequenceClassification, DogeModel, DogePreTrainedModel
+    from .doge2.configuration_doge2 import Doge2Config
+    from .doge2.modeling_doge2 import Doge2ForCausalLM, Doge2ForSequenceClassification, Doge2Model, Doge2PreTrainedModel
 else:
     import sys
 
@@ -33,4 +35,9 @@ __all__ = [
     "DogeForSequenceClassification",
     "DogeModel",
     "DogePreTrainedModel",
+    "Doge2Config",
+    "Doge2ForCausalLM",
+    "Doge2ForSequenceClassification",
+    "Doge2Model",
+    "Doge2PreTrainedModel",
 ]
