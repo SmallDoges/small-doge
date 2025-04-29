@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2025 SmallDoge team. All rights reserved.
+# Copyright 2025 Jingze Shi and the HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,12 +19,30 @@ from transformers.utils.import_utils import define_import_structure
 
 
 if TYPE_CHECKING:
-    from .models import DogeConfig, DogeForCausalLM, DogeForSequenceClassification, DogeModel, DogePreTrainedModel
+    from .models.doge.configuration_doge import DogeConfig
+    from .models.doge.modeling_doge import DogeForCausalLM, DogeForSequenceClassification, DogeModel, DogePreTrainedModel
+    from .models.doge2.configuration_doge2 import Doge2Config
+    from .models.doge2.modeling_doge2 import Doge2ForCausalLM, Doge2ForSequenceClassification, Doge2Model, Doge2PreTrainedModel
 else:
     import sys
 
     _file = globals()["__file__"]
     sys.modules[__name__] = _LazyModule(__name__, _file, define_import_structure(_file), module_spec=__spec__)
+
+from .trainer.doge import (
+    doge_pt_trainer,
+    doge_sft_trainer,
+    doge_dpo_trainer,
+    doge_grpo_trainer,
+    doge_tokenizer_trainer,
+)
+from .trainer.doge2 import (
+    doge2_pt_trainer,
+    doge2_sft_trainer,
+    doge2_dpo_trainer,
+    doge2_grpo_trainer,
+    doge2_tokenizer_trainer,
+)
 
 __all__ = [
     "DogeConfig",
@@ -32,4 +50,19 @@ __all__ = [
     "DogeForSequenceClassification",
     "DogeModel",
     "DogePreTrainedModel",
+    "Doge2Config",
+    "Doge2ForCausalLM",
+    "Doge2ForSequenceClassification",
+    "Doge2Model",
+    "Doge2PreTrainedModel",
+    "doge_pt_trainer",
+    "doge_sft_trainer",
+    "doge_dpo_trainer",
+    "doge_grpo_trainer",
+    "doge_tokenizer_trainer",
+    "doge2_pt_trainer",
+    "doge2_sft_trainer",
+    "doge2_dpo_trainer",
+    "doge2_grpo_trainer",
+    "doge2_tokenizer_trainer",
 ]
