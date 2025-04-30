@@ -162,7 +162,7 @@ def mix_datasets_by_ratio(
         tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
     
         # Mix datasets
-        mixed_dataset = mix_datasets_by_radio(
+        mixed_dataset = mix_datasets_by_ratio(
             datasets_and_ratios=datasets_and_ratios,
             total_sample_size=10000,
             dataset_text_field="text",
@@ -188,7 +188,9 @@ def mix_datasets_by_ratio(
         dataset_name, ratio = dataset_and_ratio.popitem()
 
         # Check subset name
-        if ":" in dataset_name:
+        windows_drive_pattern = r'^[a-zA-Z]:.*'
+        is_windows_path = bool(re.match(windows_drive_pattern, dataset_name))
+        if ":" in dataset_name and not is_windows_path:
             dataset_name, subset_name = dataset_name.split(":")
         else:
             subset_name = None
@@ -208,9 +210,10 @@ def mix_datasets_by_ratio(
         # Process each split of the dataset
         for split_name, split_dataset in dataset.items():
 
+            logger.info(f"Original dataset size for {dataset_name}: {split_name}: {len(split_dataset)}")
             # Process the dataset from text to input_ids
             split_dataset = prepare_dataset(
-                split_dataset.take(100),
+                split_dataset,
                 dataset_name=f"{dataset_name}: {split_name}" if subset_name is None else f"{dataset_name}: {subset_name}: {split_name}",
                 dataset_text_field=dataset_text_field,
                 processing_class=processing_class,
@@ -219,13 +222,20 @@ def mix_datasets_by_ratio(
                 formatting_func=formatting_func,
                 dataset_num_proc=dataset_num_proc,
             )
+            
 
             # Calculate the target size for the dataset
             target_size = int(total_sample_size * ratio) if split_name == "train" else len(split_dataset)
             current_size = len(split_dataset)
+            logger.info(f"Processed dataset size for {dataset_name}: {split_name}: {current_size}")
+            logger.info(f"Target size for {dataset_name}: {split_name}: {target_size}")
 
             # If the dataset is smaller than the target size, repeat it
             if current_size < target_size:
+                logger.warning(
+                    f"Dataset {dataset_name}: {split_name} is smaller than the target size. "
+                    f"Repeating the dataset to reach the target size."
+                )
                 indices = []
                 full_copies = target_size // current_size
                 remainder = target_size % current_size
@@ -237,6 +247,10 @@ def mix_datasets_by_ratio(
                 
                 split_dataset = split_dataset.select(indices)
             else:
+                logger.warning(
+                    f"Dataset {dataset_name}: {split_name} is larger than the target size. "
+                    f"Truncating the dataset to reach the target size."
+                )
                 split_dataset = split_dataset.select(range(target_size))
             
             # Concatenate the split dataset with the final mixed dataset
