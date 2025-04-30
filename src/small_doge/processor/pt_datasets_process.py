@@ -177,6 +177,11 @@ def mix_datasets_by_ratio(
         print(mixed_dataset)
     ```"""
 
+    # Check if the dataset ratios sum to 1.0
+    total_ratio = sum([list(dataset.values())[0] for dataset in datasets_and_ratios])
+    if total_ratio != 1.0:
+        raise ValueError(f"Total ratio must be 1.0, but got {total_ratio}. Please check your ratios.")
+
     final_mixed_dataset = {}
 
     for dataset_and_ratio in datasets_and_ratios:
