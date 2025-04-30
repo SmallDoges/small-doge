@@ -26,7 +26,7 @@ from datasets import load_dataset, load_from_disk
 from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
+from small_doge.models.doge.modeling_doge import DogeConfig, DogeForCausalLM, DogeModel
 import trl
 from trl import (
     ModelConfig,
