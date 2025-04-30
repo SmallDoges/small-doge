@@ -113,7 +113,7 @@ def prepare_dataset(
     return dataset
 
 
-def mix_datasets_by_radio(
+def mix_datasets_by_ratio(
     datasets_and_ratios: List[Dict[str, float]],
     total_sample_size: int,
     dataset_text_field: str,
@@ -256,7 +256,7 @@ def main(args):
     tokenizer = AutoTokenizer.from_pretrained(args.cache_dir)
 
     # Mix datasets
-    mixed_dataset = mix_datasets_by_radio(
+    mixed_dataset = mix_datasets_by_ratio(
         datasets_and_ratios=args.datasets_and_ratios,
         total_sample_size=args.total_sample_size,
         dataset_text_field=args.dataset_text_field,
