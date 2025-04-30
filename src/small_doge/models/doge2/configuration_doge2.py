@@ -14,8 +14,7 @@
 # limitations under the License.
 from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_rope_utils import rope_config_validation
-from transformers.models.qwen3_moe.modeling_qwen3_moe import Qwen3MoeAttention
-from transformers.models.llama4.modeling_llama4 import Llama4TextAttention
+
 
 class Doge2Config(PretrainedConfig):
     r"""
@@ -45,11 +44,11 @@ class Doge2Config(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models). Only
             relevant if `config.is_decoder=True`.
-        bos_token_id (`int`, *optional*, defaults to 0):
+        bos_token_id (`int`, *optional*, defaults to None):
             Beginning of stream token id.
-        eos_token_id (`int`, *optional*, defaults to 1):
+        eos_token_id (`int`, *optional*, defaults to 2):
             End of stream token id.
-        pad_token_id (`int`, *optional*, defaults to 2):
+        pad_token_id (`int`, *optional*, defaults to 0):
             Padding token id.
         tie_word_embeddings (`bool`, *optional*, defaults to `False`):
             Whether to tie weight embeddings
@@ -173,9 +172,9 @@ class Doge2Config(PretrainedConfig):
         initializer_range=0.02,
         rms_norm_eps=1e-06,
         use_cache=True,
-        bos_token_id=0,
-        eos_token_id=1,
-        pad_token_id=2,
+        bos_token_id=None,
+        eos_token_id=2,
+        pad_token_id=0,
         tie_word_embeddings=False,
         max_position_embeddings=2048,
         rope_theta=10000.0,
