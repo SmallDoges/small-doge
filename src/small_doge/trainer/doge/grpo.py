@@ -29,7 +29,7 @@ from transformers.trainer_utils import get_last_checkpoint
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
-from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
+from small_doge.models.doge.modeling_doge import DogeConfig, DogeForCausalLM, DogeModel
 import trl
 from trl import (
     ModelConfig,

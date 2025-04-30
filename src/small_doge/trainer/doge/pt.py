@@ -38,7 +38,7 @@ from transformers import (
 from transformers.trainer_utils import get_last_checkpoint
 
 import yaml
-from small_doge.models.modeling_doge import DogeConfig, DogeForCausalLM, DogeModel
+from small_doge.models.doge.modeling_doge import DogeConfig, DogeForCausalLM, DogeModel
 from trl import ModelConfig, ScriptArguments, TrlParser
 
 
