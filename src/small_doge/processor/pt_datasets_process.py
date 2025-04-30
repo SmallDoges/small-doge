@@ -162,7 +162,7 @@ def mix_datasets_by_ratio(
         tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
     
         # Mix datasets
-        mixed_dataset = mix_datasets_by_radio(
+        mixed_dataset = mix_datasets_by_ratio(
             datasets_and_ratios=datasets_and_ratios,
             total_sample_size=10000,
             dataset_text_field="text",
