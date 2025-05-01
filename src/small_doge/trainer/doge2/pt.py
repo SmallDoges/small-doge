@@ -45,6 +45,133 @@ from trl import ModelConfig, ScriptArguments, TrlParser
 logger = logging.getLogger(__name__)
 
 
+def set_warmup_phase(model: Doge2ForCausalLM, phase: int):
+    """
+    Set the warm-up phase for model parameters
+    
+    Args:
+        model: The model
+        phase: Warm-up phase(1: Self-Attention, 2: MLP, 3: Residual, 4: All Parameters)
+    
+    Returns:
+        model: The model with frozen/unfrozen parameters
+    """
+
+    # Define parameter patterns for each phase
+    attn_params = [
+        r"^model\.layers\.\d+\.self_attn\.A$",
+        r"^model\.layers\.\d+\.self_attn\.dt_proj\.weight$",
+        r"^model\.layers\.\d+\.self_attn\.q_norm\.weight$",
+        r"^model\.layers\.\d+\.self_attn\.k_norm\.weight$",
+    ]
+    mlp_params = [
+        r"^model\.layers\.\d+\.mlp\.router_gate\.weight$",
+        r"^model\.layers\.\d+\.mlp\.down_embed\.weight$",
+        r"^model\.layers\.\d+\.mlp\.up_embed\.weight$",
+    ]
+    residual_params = [
+        r"^model\.layers\.\d+\.input_residual$",
+        r"^model\.layers\.\d+\.post_attention_residual$",
+    ]
+    all_params = [r".*"]
+
+    # Freeze all parameters first
+    for name, param in model.named_parameters():
+        param.requires_grad = False
+
+    # Thaw the corresponding parameters according to the current phase
+    unfreeze_params = []
+    phase_name = ""
+
+    if phase == 1:
+        # Phase 1: Only train self-attention-related parameters
+        active_params = attn_params
+        phase_name = "Self-Attention"
+    elif phase == 2:
+        # Phase 2: Only train MLP-related parameters
+        active_params = mlp_params
+        phase_name = "MLP"
+    elif phase == 3:
+        # Phase 3: Train residual connection related parameters
+        active_params = residual_params
+        phase_name = "Residual"
+    elif phase == 4:
+        # Phase 4: Train all parameters together
+        active_params = all_params
+        phase_name = "All Parameters"
+    else:
+        logger.warning(f"Invalid warm-up phase: {phase}, defaulting to all parameters")
+        active_params = all_params
+        phase_name = "All parameters"
+    
+    # Unfreeze the parameters of the current phase
+    for name, param in model.named_parameters():
+        if any(re.match(pattern, name) for pattern in active_params):
+            param.requires_grad = True
+            unfreeze_params.append(name)
+    
+    logger.info(f"Warm-up phase {phase} ({phase_name}): unfreeze {len(unfreeze_params)} parameters, freeze other parameters")
+    logger.info(f"Unfrozen parameters: {unfreeze_params}")
+    return model
+
+
+class MultiphaseWarmupCallback(TrainerCallback):
+    """
+    Multiphase warm-up callback with automatic phase transition
+    """
+
+    def __init__(self, warmup_phase_steps: list):
+        """
+        Args:
+            warmup_phase_steps: Steps for each warm-up phase [phase1_steps, phase2_steps, phase3_steps, phase4_steps]
+        """
+        self.warmup_phase_steps = warmup_phase_steps
+        self.total_steps = sum(warmup_phase_steps)
+        self.phase_end_steps = [sum(warmup_phase_steps[:i+1]) for i in range(len(warmup_phase_steps))]
+        self.current_phase = 1
+
+        logger.info(f"Multiphase warm-up: {len(warmup_phase_steps)} phases, steps per phase: {warmup_phase_steps}")
+        logger.info(f"Phase transition points: {self.phase_end_steps}")
+
+    def on_train_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, model: Doge2ForCausalLM = None, **kwargs):
+        if model is not None:
+            set_warmup_phase(model, self.current_phase)
+            logger.info(f"Starting warm-up phase 1: Self-Attention")
+
+    def on_step_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, model: Doge2ForCausalLM = None, **kwargs):
+        if model is None:
+            return
+
+        current_step = state.global_step
+        determined_phase = 1 # Default to phase 1
+
+        for i, end_step in enumerate(self.phase_end_steps):
+            if current_step < end_step:
+                determined_phase = i + 1
+                break
+            elif i == len(self.phase_end_steps) - 1:
+                determined_phase = len(self.phase_end_steps) # Last phase
+
+        # If the phase has changed, update model parameters
+        if determined_phase != self.current_phase:
+            phase_names = ["Self-Attention", "MLP", "Residual", "All Parameters"]
+            logger.info(f"Transitioning from warm-up phase {self.current_phase}: {phase_names[self.current_phase-1]} "
+                       f"to phase {determined_phase}: {phase_names[determined_phase-1]} at step {current_step}")
+            
+            self.current_phase = determined_phase
+            set_warmup_phase(model, self.current_phase)
+
+    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, model: Doge2ForCausalLM = None, **kwargs):
+        # Check if the current step is the last step of the warm-up phase
+        if state.global_step == self.total_steps:
+            logger.info("All warm-up phases completed, transitioning to normal training mode")
+            # Unfreeze all parameters for normal training
+            if model is not None:
+                for name, param in model.named_parameters():
+                    param.requires_grad = True
+                logger.info("All parameters unfrozen for normal training")
+
+
 def main(script_args, training_args, model_args, model_config):
     # Set seed for reproducibility
     set_seed(training_args.seed)
@@ -122,6 +249,19 @@ def main(script_args, training_args, model_args, model_config):
     logger.info(f"Model structure: {model}")
     logger.info(f"Model parameters: {model_num_params}")
 
+    #########################
+    # Multiphase warmup phase
+    #########################
+    if training_args.warmup_steps > 0:
+        total_warmup_steps = training_args.warmup_steps
+        warmup_phase_steps = [total_warmup_steps // 4] * 4
+        warmup_phase_steps[-1] += total_warmup_steps % 4
+        warmup_callback = MultiphaseWarmupCallback(warmup_phase_steps)
+        logger.info(f"Initialized automatic multiphase warm-up with 4 phases")
+        logger.info(f"Phase steps: {warmup_phase_steps}, total warm-up steps: {total_warmup_steps}")
+    else:
+        warmup_callback = None
+
     ################################
     # Initialize the PT trainer
     ################################
@@ -136,6 +276,7 @@ def main(script_args, training_args, model_args, model_config):
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         processing_class=tokenizer,
         data_collator=data_collator,
+        callbacks=[warmup_callback] if training_args.warmup_steps > 0 else None,
     )
 
     ###############
