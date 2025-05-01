@@ -256,7 +256,7 @@ class Doge2Attention(nn.Module):
                     rate_value = torch.kthvalue(attn_mask, num_dynamic_mask, dim=-1, keepdim=True).values
                     attn_mask = attn_mask.masked_fill(attn_mask < rate_value, min_type)
             else:
-                ValueError("`dynamic_mask_ratio` should be in the range (0.0, 1.0)")
+                raise ValueError("`dynamic_mask_ratio` should be in the range (0.0, 1.0)")
         if attention_mask is not None:
             attn_mask = attn_mask + attention_mask[:, :, :, : attn_mask.shape[-1]]
 
@@ -703,6 +703,7 @@ class Doge2Model(Doge2PreTrainedModel):
                 position_ids=position_ids,
                 past_key_value=past_key_values,
                 output_attentions=output_attentions,
+                output_router_logits=output_router_logits,
                 use_cache=use_cache,
                 cache_position=cache_position,
                 position_embeddings=position_embeddings,
