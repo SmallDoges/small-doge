@@ -51,7 +51,7 @@ def set_warmup_phase(model: Doge2ForCausalLM, phase: int):
     
     Args:
         model: The model
-        phase: Warm-up phase(1: Self-Attention, 2: MLP, 3: Residual, 4: All Parameters)
+        phase: Warm-up phase(1: Self-Attention, 2: Self-Attention+MLP, 3: Self-Attention+MLP+Residual, 4: All Parameters)
     
     Returns:
         model: The model with frozen/unfrozen parameters
