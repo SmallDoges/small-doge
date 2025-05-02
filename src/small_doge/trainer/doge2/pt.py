@@ -82,19 +82,20 @@ def set_warmup_phase(model: Doge2ForCausalLM, phase: int):
     # Thaw the corresponding parameters according to the current phase
     unfreeze_params = []
     phase_name = ""
+    active_params = []
 
     if phase == 1:
         # Phase 1: Only train self-attention-related parameters
         active_params = attn_params
         phase_name = "Self-Attention"
     elif phase == 2:
-        # Phase 2: Only train MLP-related parameters
-        active_params = mlp_params
-        phase_name = "MLP"
+        # Phase 2: Train self-attention + MLP parameters
+        active_params = attn_params + mlp_params
+        phase_name = "Self-Attention + MLP"
     elif phase == 3:
-        # Phase 3: Train residual connection related parameters
-        active_params = residual_params
-        phase_name = "Residual"
+        # Phase 3: Train self-attention + MLP + residual parameters
+        active_params = attn_params + mlp_params + residual_params
+        phase_name = "Self-Attention + MLP + Residual"
     elif phase == 4:
         # Phase 4: Train all parameters together
         active_params = all_params
@@ -154,7 +155,7 @@ class MultiphaseWarmupCallback(TrainerCallback):
 
         # If the phase has changed, update model parameters
         if determined_phase != self.current_phase:
-            phase_names = ["Self-Attention", "MLP", "Residual", "All Parameters"]
+            phase_names = ["Self-Attention", "Self-Attention + MLP", "Self-Attention + MLP + Residual", "All Parameters"]
             logger.info(f"Transitioning from warm-up phase {self.current_phase}: {phase_names[self.current_phase-1]} "
                        f"to phase {determined_phase}: {phase_names[determined_phase-1]} at step {current_step}")
             
