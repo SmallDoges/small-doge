@@ -222,6 +222,9 @@ def main(script_args, training_args, model_args, model_config):
         use_fast=True,
         trust_remote_code=model_args.trust_remote_code,
     )
+    tokenizer.padding_side = "right"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     ###################
     # Model init kwargs
