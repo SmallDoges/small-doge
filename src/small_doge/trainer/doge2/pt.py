@@ -217,7 +217,10 @@ def main(script_args, training_args, model_args, model_config):
     # Load tokenizer
     ################
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code, use_fast=True
+        model_args.model_name_or_path,
+        revision=model_args.model_revision,
+        use_fast=True,
+        trust_remote_code=model_args.trust_remote_code,
     )
 
     ###################
