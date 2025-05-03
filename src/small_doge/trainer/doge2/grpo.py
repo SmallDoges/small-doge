@@ -446,6 +446,19 @@ def main(
     else:
         dataset = load_from_disk(script_args.dataset_name)
 
+    ################
+    # Load tokenizer
+    ################
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.model_name_or_path,
+        revision=model_args.model_revision,
+        use_fast=True,
+        trust_remote_code=model_args.trust_remote_code,
+    )
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     def preprocess_function(example):
         prompt = []
         if training_args.system_prompt is not None:
