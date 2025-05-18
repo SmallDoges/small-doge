@@ -21,7 +21,6 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from trl.data_utils import pack_dataset, truncate_dataset, is_conversational, maybe_convert_to_chatml, maybe_apply_chat_template
 from trl.trainer.utils import ConstantLengthDataset
 from argparse import ArgumentParser
-from trl import SFTTrainer
 
 
 # Configure logger
