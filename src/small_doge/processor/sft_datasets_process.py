@@ -250,7 +250,10 @@ def mix_datasets_by_ratio(
             
 
             # Calculate the target size for the dataset
-            target_size = int(total_sample_size * ratio) if split_name == "train" else len(split_dataset)
+            if total_sample_size == -1:
+                target_size = len(split_dataset)
+            else:
+                target_size = int(total_sample_size * ratio) if split_name == "train" else len(split_dataset)
             current_size = len(split_dataset)
             logger.info(f"Processed dataset size for {dataset_name}: {split_name}: {current_size}")
             logger.info(f"Target size for {dataset_name}: {split_name}: {target_size}")
