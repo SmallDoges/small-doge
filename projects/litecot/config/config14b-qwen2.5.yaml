@@ -1,0 +1,53 @@
+# Logging and Output arguments
+log_level: info
+logging_strategy: steps
+logging_steps: 10
+save_total_limit: 1
+report_to:
+# - tensorboard
+- wandb
+save_strategy: steps
+save_steps: 100
+output_dir: /data/zhangjiayi/long2short/model_results/qwen2.5-14b-shortcot-packing
+overwrite_output_dir: true
+
+# Model arguments
+model_name_or_path: /data/zhangjiayi/long2short/weights/qwen2.5-14b
+model_revision: main
+trust_remote_code: True
+torch_dtype: bfloat16
+
+# Data training arguments
+dataset_name: /data/zhangjiayi/long2short/training_data/dynamiccot/processed
+dataset_format: parquet
+# dataset_configs:
+# - all
+max_seq_length: 8192
+dataset_num_proc: 8
+packing: true
+
+# SFT trainer config
+preprocessing_num_workers: 4 # Equal to the number of Gpus you are using
+seed: 233
+do_train: true
+num_train_epochs: 3
+per_device_train_batch_size: 1
+do_eval: true
+eval_strategy: steps
+eval_steps: 10
+per_device_eval_batch_size: 1
+optim: adamw_torch
+learning_rate: 5.0e-5
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+warmup_ratio: 0.1
+weight_decay: 0.0001
+gradient_accumulation_steps: 32
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+max_grad_norm: 1.0
+bf16: true
+# liger_kernel: true
+use_liger: true
