@@ -23,9 +23,10 @@
 
 **新闻**:
 
-* **[2025-3-12]** 🎉我们已经完成了 **Doge-20M**, **Doge-60M**, **Doge-160M**, **Doge-320** 四种参数规模的Base模型的预训练!
+* **[2025-3-12]** 🎉我们已经完成了 **Doge-20M**, **Doge-60M**, **Doge-160M**, **Doge-320M** 四种参数规模的Base模型的预训练!
 * **[2025-3-9]** 🎉我们发布了 **SmallThoughts** 推理数据集, 大幅降低推理微调的成本!
 * **[2025-2-20]** 🎉 我们现在已经支持 **预训练的Doge-Base**, **指令微调的Doge-Instruct**, 以及**推理微调的Doge-Reason**的全部训练流程, 请参阅[指南](./recipes/doge/README_zh.md)!
+* **[2025-2-15]** 🚀 我们推出了 **Doge2**, 这是一个改进的专家混合架构, 具有更好的可扩展性和性能!
 
 # small-doge
 
@@ -33,6 +34,7 @@
 * small doge系列极其轻量, 最小版本体积约是 GPT3 的 **$\frac{1}{7800}$**, 力求做到最普通的个人GPU也可快速推理甚至训练.🏎️
 * 我们提供了数据集预处理、预训练、监督微调、强化学习偏好对齐的全阶段代码、视觉多模态VLM(正在开发)和推理微调R1(正在开发).🧪
 * 站在巨人的肩膀上可以看的更远, 希望small doge系列小模型能为研究者提供更多思路, 为实现**具身通用人工智能**的道路添砖加瓦.🤖
+* 我们现在提供两种模型架构: **Doge** (原始架构) 和 **Doge2** (改进版本，具有更好的专家混合设计和可扩展性) 以满足不同的研究和应用需求.✨
 
 > [!TIP]
 > 我们希望尽可能使用开源工具和框架来简化从数据处理到模型训练的过程, 以便初学者可以轻松理解和使用.🤗
@@ -50,6 +52,8 @@
 </div>
 
 如图所示, Doge 架构的序列变换部分使用了 `Dynamic Mask Attention`, 可以理解为在训练时使用与值状态相关的自注意力, 在推理时使用没有过去状态衰减的状态空间, 以解决现有的 Transformer 或 SSM 在长文本中迷失的问题. Doge 的状态变换部分使用了 `Cross Domain Mixture of Experts`, 由密集线性层和稀疏嵌入层组成, 并可以额外增加稀疏参数, 以从密集权重检查点继续训练而无需重新训练整个模型, 从而降低模型的持续迭代成本. 此外, Doge 还使用了具有可学习参数的 `RMSNorm` 和 `Residual` 来适应深度模型的梯度范围.
+
+我们还提供了 **Doge2**, 这是一个基于原始Doge设计构建的增强架构, 具有改进的专家混合能力, 在保持核心效率原则的同时提供更好的可扩展性和性能.
 
 
 ## 安装要求
@@ -88,7 +92,7 @@ pip install -e .
 
 ## 快速入门
 
-我们已经编写了一个 [notebook](./examples/notebook.ipynb) 和 [训练指南](./recipes/doge/README.md) 来演示数据集处理、模型训练和模型评估的整个过程. 您还可以独立使用已经发布的模型, 如果感兴趣请详细阅读notebook或训练指南, 里面有具体的步骤和细节！
+我们已经编写了 [notebook](./examples/notebook.ipynb) ([中文版](./examples/notebook_zh.ipynb)) 和 [Doge训练指南](./recipes/doge/README_zh.md) 来演示数据集处理、模型训练和模型评估的整个过程. Doge2训练配置可在 [doge2配方文件夹](./recipes/doge2/) 中找到. 您还可以独立使用已经发布的模型, 如果感兴趣请详细阅读notebook或训练指南, 里面有具体的步骤和细节！
 
 
 ## 型号发布
@@ -138,14 +142,14 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 |---|---|---|---|---|---|---|
 | [Doge-20M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-20M-Instruct-SFT) | [smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 8e-4 | 0.25M | bfloat16 |
 | [Doge-60M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-60M-Instruct-SFT) | [smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 6e-4 | 0.25M | bfloat16 |
-| [Doge-160M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-160M-Instruct-SFT) | [HuggingFaceTB/smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 4e-4 | 0.25M | bfloat16 |
+| [Doge-160M-Instruct-SFT](https://huggingface.co/SmallDoge/Doge-160M-Instruct-SFT) | [smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk) | 2 | 2048 | 4e-4 | 0.25M | bfloat16 |
 
 **直接优化微调**:
 | 模型 | 训练数据 | 轮次 | 上下文长度 | 学习率 | 批量大小 | 精度 |
 |---|---|---|---|---|---|---|
 | [Doge-20M-Instruct](https://huggingface.co/SmallDoge/Doge-20M-Instruct) | [ultrafeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 8e-5 | 0.125M | bfloat16 |
 | [Doge-60M-Instruct](https://huggingface.co/SmallDoge/Doge-60M-Instruct) | [ultrafeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 6e-5 | 0.125M | bfloat16 |
-| [Doge-160M-Instruct](https://huggingface.co/SmallDoge/Doge-160M-Instruct) | [HuggingFaceH4/ultrafeedback_binarized](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 4e-5 | 0.125M | bfloat16 |
+| [Doge-160M-Instruct](https://huggingface.co/SmallDoge/Doge-160M-Instruct) | [ultrafeedback](https://huggingface.co/datasets/HuggingFaceH4/ultrafeedback_binarized) | 2 | 1024 | 4e-5 | 0.125M | bfloat16 |
 
 **评估**:
 | 模型 | IFEval (Prompt Strict Acc) | MMLU | BBH | ARC | PIQA | HellaSwag | tokens / s on i7-11 CPU |
@@ -160,6 +164,18 @@ Doge 使用 `wsd_scheduler` 作为训练调度器, 将学习率分为 `warmup`, 
 - 镜像: nvcr.io/nvidia/pytorch:24.12-py3
 - 硬件: 1x NVIDIA RTX 4090
 - 软件: Transformers, TRL
+
+
+### Doge2 (增强架构)
+
+**Doge2** 代表我们的下一代模型架构, 具有增强的专家混合设计:
+
+- **改进的专家混合**: 增强的专家路由, 支持多达900个专家和每个token15个专家
+- **更好的可扩展性**: 针对更大参数数量优化的架构, 同时保持效率
+- **增强的性能**: 改进的训练稳定性和收敛性
+- **扩展的词汇表**: 支持更大的词汇表大小 (多达49,152个tokens)
+
+*Doge2模型目前正在积极开发中. 训练配方和模型权重将很快发布.*
 
 
 ## 期许
