@@ -92,7 +92,7 @@ pip install -e .
 
 ## 快速入门
 
-我们已经编写了 [notebook](./examples/notebook.ipynb) ([中文版](./examples/notebook_zh.ipynb)) 和针对 [Doge](./recipes/doge/README_zh.md) 和 [Doge2](./recipes/doge2/) 的训练指南来演示数据集处理、模型训练和模型评估的整个过程. 您还可以独立使用已经发布的模型, 如果感兴趣请详细阅读notebook或训练指南, 里面有具体的步骤和细节！
+我们已经编写了 [notebook](./examples/notebook.ipynb) ([中文版](./examples/notebook_zh.ipynb)) 和 [Doge训练指南](./recipes/doge/README_zh.md) 来演示数据集处理、模型训练和模型评估的整个过程. Doge2训练配置可在 [doge2配方文件夹](./recipes/doge2/) 中找到. 您还可以独立使用已经发布的模型, 如果感兴趣请详细阅读notebook或训练指南, 里面有具体的步骤和细节！
 
 
 ## 型号发布

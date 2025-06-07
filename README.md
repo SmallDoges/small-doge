@@ -94,7 +94,7 @@ pip install -e .
 
 ## Quick Start
 
-We have written a [notebook](./examples/notebook.ipynb) and training guides for [Doge](./recipes/doge/README.md) and [Doge2](./recipes/doge2/) to demonstrate the entire process of dataset processing, model training, and model evaluation. You can also use the models that have been released independently. If you are interested, please read the notebook or training guide in detail, which contains specific steps and details!
+We have written a [notebook](./examples/notebook.ipynb) and a [training guide for Doge](./recipes/doge/README.md) to demonstrate the entire process of dataset processing, model training, and model evaluation. Doge2 training configurations are available in the [doge2 recipes folder](./recipes/doge2/). You can also use the models that have been released independently. If you are interested, please read the notebook or training guide in detail, which contains specific steps and details!
 
 
 ## Models Released
