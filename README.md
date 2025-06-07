@@ -24,9 +24,10 @@ English | [简体中文](./README_zh.md)
 
 **News**:
 
-* **[2025-3-12]** 🎉We have completed the pre-training of four base models with parameters of **Doge-20M**, **Doge-60M**, **Doge-160M**, and **Doge-320**!
+* **[2025-3-12]** 🎉We have completed the pre-training of four base models with parameters of **Doge-20M**, **Doge-60M**, **Doge-160M**, and **Doge-320M**!
 * **[2025-3-9]** 🎉We released the **SmallThoughts** inference dataset, greatly reducing the cost of inference fine-tuning!
 * **[2025-2-20]** 🎉 We now support the full training process of **pre-trained Doge-Base**, **instruction fine-tuned Doge-Instruct**, and **reasoning fine-tuned Doge-R1**, please refer to the [guide](./recipes/doge/README.md)!
+* **[2025-2-15]** 🚀 We introduce **Doge2**, an enhanced architecture with improved Mixture of Experts design and better scalability!
 
 # small-doge
 
@@ -34,6 +35,7 @@ English | [简体中文](./README_zh.md)
 * The small doge series is extremely lightweight, with the smallest version being about **$\frac{1}{7800}$** the size of GPT3, and strives to make even the most ordinary personal GPU capable of fast inference and even training.🏎️
 * We provide full-stage code for dataset preprocessing, pre-training, supervised fine-tuning, reinforcement learning preference alignment, visual multimodal VLM (under development), and inference fine-tuning R1 (under development).🧪
 * Standing on the shoulders of giants can see further, we hope that the small doge series of small models can provide researchers with more ideas and contribute to the road to achieving **Embodied Artificial General Intelligence**.🤖
+* We now offer two model architectures: **Doge** (original) and **Doge2** (enhanced with better MoE design and scalability) to meet different research and application needs.✨
 
 > [!TIP]
 > We hope to use open-source tools and frameworks as much as possible to simplify the process from data processing to model training, so that beginners can easily understand and use.🤗
@@ -52,6 +54,8 @@ This project aims to develop a series of dynamic and fast small models to promot
 </div>
 
 As shown in the figure, the sequence transformation part of the Doge architecture uses `Dynamic Mask Attention`, which can be understood as using self-attention related to value states during training, and using state-space without past state decay during inference, to solve the problem of existing Transformers or SSMs getting lost in long text. The state transformation part of Doge uses `Cross Domain Mixture of Experts`, which consists of dense linear layers and sparse embedding layers, and can additionally increase sparse parameters to continue training from dense weight checkpoints without retraining the entire model, thereby reducing the cost of continuous iteration of the model. In addition, Doge also uses `RMSNorm` and `Residual` with learnable parameters to adapt the gradient range of deep models.
+
+We also provide **Doge2**, an enhanced architecture that builds upon the original Doge design with improved Mixture of Experts capabilities, offering better scalability and performance while maintaining the core efficiency principles.
 
 
 ## Requirements
@@ -90,7 +94,7 @@ pip install -e .
 
 ## Quick Start
 
-We have written a [notebook](./examples/notebook.ipynb) and a [training guide](./recipes/doge/README.md) to demonstrate the entire process of dataset processing, model training, and model evaluation. You can also use the models that have been released independently. If you are interested, please read the notebook or training guide in detail, which contains specific steps and details!
+We have written a [notebook](./examples/notebook.ipynb) and training guides for [Doge](./recipes/doge/README.md) and [Doge2](./recipes/doge2/) to demonstrate the entire process of dataset processing, model training, and model evaluation. You can also use the models that have been released independently. If you are interested, please read the notebook or training guide in detail, which contains specific steps and details!
 
 
 ## Models Released
@@ -162,6 +166,18 @@ Here are the initial learning rates required to continue training at each checkp
 - Image: nvcr.io/nvidia/pytorch:24.12-py3
 - Hardware: 1x NVIDIA RTX 4090
 - Software: Transformers, TRL
+
+
+### Doge2 (Enhanced Architecture)
+
+**Doge2** represents our next-generation model architecture with enhanced Mixture of Experts design:
+
+- **Improved MoE**: Enhanced expert routing with up to 900 experts and 15 experts per token
+- **Better Scalability**: Optimized architecture for larger parameter counts while maintaining efficiency  
+- **Enhanced Performance**: Improved training stability and convergence
+- **Extended Vocabulary**: Support for larger vocabulary sizes (up to 49,152 tokens)
+
+*Doge2 models are currently in active development. Training recipes and model weights will be released soon.*
 
 
 ## Expectations
