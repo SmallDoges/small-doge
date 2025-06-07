@@ -242,7 +242,7 @@ class Doge2Attention(nn.Module):
             config.hidden_size, config.num_key_value_heads * self.head_dim, bias=config.attention_bias
         )
         # dynamic mask for the QK^T attention weights matrix
-        self.A = nn.Parameter(torch.zeros(config.num_attention_heads))
+        self.A = nn.Parameter(torch.ones(config.num_attention_heads))
         self.dt_proj = nn.Linear(
             config.num_key_value_heads * self.head_dim, config.num_attention_heads, bias=config.attention_bias
         )
