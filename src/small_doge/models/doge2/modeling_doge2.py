@@ -242,9 +242,9 @@ class Doge2Attention(nn.Module):
             config.hidden_size, config.num_key_value_heads * self.head_dim, bias=config.attention_bias
         )
         # dynamic mask for the QK^T attention weights matrix
-        self.A = nn.Parameter(torch.ones(config.num_attention_heads))
+        self.A = nn.Parameter(torch.ones(config.num_key_value_heads))
         self.dt_proj = nn.Linear(
-            config.num_key_value_heads * self.head_dim, config.num_attention_heads, bias=config.attention_bias
+            config.num_key_value_heads * self.head_dim, config.num_key_value_heads, bias=config.attention_bias
         )
         self.o_proj = nn.Linear(
             config.num_attention_heads * self.head_dim, config.hidden_size, bias=config.attention_bias
@@ -287,6 +287,7 @@ class Doge2Attention(nn.Module):
             keep_window_size=self.keep_window_size,
             attention_mask=attention_mask,
         )
+        attn_mask = repeat_kv(attn_mask, self.num_key_value_groups)
 
         attention_interface: Callable = eager_attention_forward
         if self.config._attn_implementation != "eager":
@@ -321,19 +322,15 @@ class Doge2Attention(nn.Module):
 
         Args:
             hidden_states (`torch.Tensor`): The input hidden_states, used to determine the minimum value of the current input precision.
-            dt_states (`torch.Tensor`): dt_states of shape `(batch_size, num_heads, key_sequence_length)`.
+            dt_states (`torch.Tensor`): dt_states of shape `(batch_size, num_kv_heads, key_sequence_length)`.
             keep_window_size (`int`): The window size of tokens that are not dynamically masked, and dynamic masking is only performed when the sequence length exceeds this value.
             attention_mask (`torch.Tensor`, *optional*): attention mask of shape `(batch_size, 1, query_sequence_length, key_sequence_length)`.
         """
         min_dtype = torch.finfo(hidden_states.dtype).min
-        attn_mask = dt_states[:, :, None, :]
-        if attn_mask.shape[-1] > keep_window_size:
-            active_mask = torch.zeros_like(attn_mask, dtype=torch.bool, device=attn_mask.device)
-            topk_indices = torch.topk(
-                attn_mask, keep_window_size, dim=-1, largest=True, sorted=False
-            ).indices
-            active_mask = active_mask.scatter(-1, topk_indices, True)
-            attn_mask = attn_mask.masked_fill(active_mask, min_dtype)
+        attn_mask = dt_states[:, :, None, :].expand(
+            -1, -1, hidden_states.shape[1], -1
+        )  # [batch_size, num_kv_heads, query_len, key_len]
+        active_mask = torch.zeros_like(attn_mask, dtype=torch.bool, device=attn_mask.device)
         if attention_mask is not None:
             if attention_mask.dtype == torch.bool:
                 dtype = hidden_states.dtype
@@ -341,7 +338,13 @@ class Doge2Attention(nn.Module):
                     attention_mask, torch.tensor(0.0, device=attention_mask.device, dtype=dtype), min_dtype
                 )
             attn_mask = attn_mask.masked_fill(attention_mask[:, :, :, : attn_mask.shape[-1]] != 0, min_dtype)
-        return attn_mask
+        if attn_mask.shape[-1] > keep_window_size:
+            topk_indices = torch.topk(
+                attn_mask, keep_window_size, dim=-1, largest=True, sorted=False
+            ).indices
+            active_mask = active_mask.scatter(-1, topk_indices, True)
+            attn_mask = attn_mask.masked_fill(~active_mask, min_dtype)
+        return attn_mask, active_mask
 
 
 class Doge2DecoderLayer(GradientCheckpointingLayer):
