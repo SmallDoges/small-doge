@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-# 可用的基础模型列表
+# Available base model list
 BASE_MODEL_LIST = [
     "SmallDoge/Doge-20M",
     "SmallDoge/Doge-20M-MoE",
@@ -23,7 +23,7 @@ BASE_MODEL_LIST = [
     "SmallDoge/Doge-320M",
 ]
 
-# 可用的指令模型列表
+# Available instruct model list
 INSTRUCT_MODEL_LIST = [
     "SmallDoge/Doge-20M-Instruct",
     "SmallDoge/Doge-20M-MoE-Instruct",
@@ -32,6 +32,6 @@ INSTRUCT_MODEL_LIST = [
     "SmallDoge/Doge-320M-Instruct",
 ]
 
-# 可用的自定义模型列表
+# Available custom model list
 CUSTOM_MODEL_LIST = [
 ]

@@ -16,25 +16,23 @@
 
 import torch
 
-# 模型配置 (Model Configuration)
-# 此配置用于定义模型加载参数
+# Model Configuration
 # This configuration is used for defining model loading parameters
 MODEL_CONFIG = {
-    'model_name_or_path': 'Qwen/Qwen2.5-0.5B-Instruct',  # 模型名称或路径 (Model name or path)
-    'trust_remote_code': True,  # 是否信任远程代码 (Whether to trust remote code)
-    'device_map': 'auto' if torch.cuda.is_available() else None,  # 设备映射 (Device mapping)
-    'torch_dtype': torch.bfloat16 if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8 else torch.float16,  # 数据类型 (Data type)
+    'model_name_or_path': 'Qwen/Qwen2.5-0.5B-Instruct',  # Model name or path
+    'trust_remote_code': True,  # Whether to trust remote code
+    'device_map': 'auto' if torch.cuda.is_available() else None,  # Device mapping
+    'torch_dtype': torch.bfloat16 if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8 else torch.float16,  # Data type
 }
 
 
-# 模型生成配置 (Model Generation Configuration)
-# 此配置用于定义模型生成参数
+# Model Generation Configuration
 # This configuration is used for defining model loading and generation parameters
 MODEL_GENERATION_CONFIG = {
-    'max_new_tokens': 1024,  # 最大生成token数 (Maximum number of tokens to generate)
-    'temperature': 0.7,  # 采样温度，控制随机性 (Sampling temperature, controls randomness)
-    'top_p': 0.9,  # 核采样参数，控制词汇多样性 (Top-p nucleus sampling parameter, controls vocabulary diversity)
-    'top_k': 50,  # 最高采样参数，控制词汇多样性 (Top-k sampling parameter, controls vocabulary diversity)
-    "repetition_penalty": 1.0,  # 重复惩罚参数，控制重复生成 (Repetition penalty parameter, controls repeated generation)
-    'use_cache': True,  # 是否使用缓存 (Whether to use cache)
+    'max_new_tokens': 1024,  # Maximum number of tokens to generate
+    'temperature': 0.7,  # Sampling temperature, controls randomness
+    'top_p': 0.9,  # Top-p nucleus sampling parameter, controls vocabulary diversity
+    'top_k': 50,  # Top-k sampling parameter, controls vocabulary diversity
+    "repetition_penalty": 1.0,  # Repetition penalty parameter, controls repeated generation
+    'use_cache': True,  # Whether to use cache
 }
