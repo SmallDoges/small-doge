@@ -91,6 +91,41 @@ Here we recommend using [Doge-tokenizer](https://huggingface.co/SmallDoge/Doge-t
 python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SmallDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
 ```
 
+Alternatively, for more advanced dataset mixing, you can use the `mix_datasets_by_radio` function from `small_doge.processor.pt_datasets_process`:
+
+```python
+from transformers import AutoTokenizer
+from small_doge.processor.pt_datasets_process import mix_datasets_by_radio
+
+# Define datasets and their mixing ratios
+datasets_and_ratios = [
+    {"fineweb-edu": 0.7},
+    {"cosmopedia-v2": 0.2},
+    {"python-edu": 0.05},
+    {"finemath": 0.05},
+]
+
+# Create tokenizer
+tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
+
+# Mix datasets
+mixed_dataset = mix_datasets_by_radio(
+    datasets_and_ratios=datasets_and_ratios,
+    total_sample_size=128000000,
+    dataset_text_field="text",
+    processing_class=tokenizer,
+    max_length=2048,
+    packing=True,
+    formatting_func=None,
+    dataset_num_proc=16,
+    seed=233,
+    cache_dir="./cache",
+)
+
+# Save the mixed dataset
+mixed_dataset.save_to_disk("./datasets/pt_dataset")
+```
+
 > [!NOTE]
 > We only keep the dataset with 256B tokens, and the ratio of fineweb-edu:cosmopedia-v2:python-edu:open-web-math = 7:2:0.5:0.5. If you need to train a larger model, please increase the scale of the dataset by yourself.
 
@@ -144,7 +179,7 @@ We support training the model using Single GPU, DDP, or DeepSpeed ZeRO-2 and ZeR
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/pt.py --config recipes/doge/Doge-20M/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/pt.py --config recipes/doge/Doge-20M/config_full.yaml
 ```
 
 > [!NOTE]
@@ -238,7 +273,7 @@ We first SFT the model to make it generate responses that follow the `prompt`.
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/sft.py --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -250,7 +285,7 @@ Then we use the DPO algorithm to align the model with human preferences after SF
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/dpo.py --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/dpo.py --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
 ```
 
 > [!NOTE]
@@ -346,7 +381,7 @@ We first DFT the model to learn powerful thinking and reasoning capabilities fro
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Reason/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/sft.py --config recipes/doge/Doge-20M-Reason/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -358,7 +393,7 @@ Then we use the GRPO algorithm to reinforce the model after DFT to make the mode
 
 ```shell
 # You need to specify the configuration file path, all parameters are in the recipe configuration file
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-Reason/grpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/grpo.py --config recipes/doge/Doge-20M-Reason/grpo/config_full.yaml
 ```
 
 > [!NOTE]

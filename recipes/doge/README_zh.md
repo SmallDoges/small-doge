@@ -91,6 +91,41 @@ conversation = [
 python ./examples/utils/preprocess_pt_datasets.py --datasets_dir ./datasets --save_dir ./datasets --tokenizer_name_or_path SmallDoge/Doge-tokenizer --train_examples 128000000 --test_examples 1000 --max_length 2048 --num_proc 16
 ```
 
+或者，您可以使用 `small_doge.processor.pt_datasets_process` 中的 `mix_datasets_by_radio` 函数进行更高级的数据集混合：
+
+```python
+from transformers import AutoTokenizer
+from small_doge.processor.pt_datasets_process import mix_datasets_by_radio
+
+# 定义数据集及其混合比例
+datasets_and_ratios = [
+    {"fineweb-edu": 0.7},
+    {"cosmopedia-v2": 0.2},
+    {"python-edu": 0.05},
+    {"finemath": 0.05},
+]
+
+# 创建分词器
+tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
+
+# 混合数据集
+mixed_dataset = mix_datasets_by_radio(
+    datasets_and_ratios=datasets_and_ratios,
+    total_sample_size=128000000,
+    dataset_text_field="text",
+    processing_class=tokenizer,
+    max_length=2048,
+    packing=True,
+    formatting_func=None,
+    dataset_num_proc=16,
+    seed=233,
+    cache_dir="./cache",
+)
+
+# 保存混合数据集
+mixed_dataset.save_to_disk("./datasets/pt_dataset")
+```
+
 > [!NOTE]
 > 我们只保留 256B tokens 的数据集, 比例为 fineweb-edu:cosmopedia-v2:python-edu:open-web-math = 7:2:0.5:0.5, 如果你需要训练更大的模型, 请自行增加数据集的规模.
 
@@ -144,7 +179,7 @@ python ./examples/utils/concatenate_pt_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/pt.py --config recipes/doge/Doge-20M/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/pt.py --config recipes/doge/Doge-20M/config_full.yaml
 ```
 
 > [!NOTE]
@@ -238,7 +273,7 @@ python ./examples/utils/concatenate_ft_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/sft.py --config recipes/doge/Doge-20M-Instruct/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -250,7 +285,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/dpo.py --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/dpo.py --config recipes/doge/Doge-20M-Instruct/dpo/config_full.yaml
 ```
 
 > [!NOTE]
@@ -345,7 +380,7 @@ python ./examples/utils/concatenate_ft_datasets.py --datasets_dir ./datasets --s
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/sft.py --config recipes/doge/Doge-20M-Reason/sft/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/sft.py --config recipes/doge/Doge-20M-Reason/sft/config_full.yaml
 ```
 
 > [!NOTE]
@@ -357,7 +392,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_con
 
 ```shell
 # 你需要指定配置文件路径, 所有参数都在配方配置文件中
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/grpo.py --config recipes/doge/Doge-20M-Reason/grpo/config_full.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/doge/grpo.py --config recipes/doge/Doge-20M-Reason/grpo/config_full.yaml
 ```
 
 > [!NOTE]

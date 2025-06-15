@@ -29,7 +29,7 @@ from transformers.trainer_utils import get_last_checkpoint
 
 from latex2sympy2_extended import NormalizationConfig
 from math_verify import LatexExtractionConfig, parse, verify
-from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
+from small_doge.models.doge2.modeling_doge2 import Doge2Config, Doge2ForCausalLM, Doge2Model
 import trl
 from trl import (
     ModelConfig,
@@ -446,6 +446,19 @@ def main(
     else:
         dataset = load_from_disk(script_args.dataset_name)
 
+    ################
+    # Load tokenizer
+    ################
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.model_name_or_path,
+        revision=model_args.model_revision,
+        use_fast=True,
+        trust_remote_code=model_args.trust_remote_code,
+    )
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     def preprocess_function(example):
         prompt = []
         if training_args.system_prompt is not None:
@@ -556,12 +569,12 @@ def main(
     ################################
     # Register the model and save
     ################################
-    AutoConfig.register("doge", DogeConfig)
-    AutoModel.register(DogeConfig, DogeModel)
-    AutoModelForCausalLM.register(DogeConfig, DogeForCausalLM)
-    DogeConfig.register_for_auto_class()
-    DogeModel.register_for_auto_class("AutoModel")
-    DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
+    AutoConfig.register("doge2", Doge2Config)
+    AutoModel.register(Doge2Config, Doge2Model)
+    AutoModelForCausalLM.register(Doge2Config, Doge2ForCausalLM)
+    Doge2Config.register_for_auto_class()
+    Doge2Model.register_for_auto_class("AutoModel")
+    Doge2ForCausalLM.register_for_auto_class("AutoModelForCausalLM")
     tokenizer = AutoTokenizer.from_pretrained(f"{training_args.output_dir}")
     tokenizer.save_pretrained(f"{training_args.output_dir}")
     model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")

@@ -26,12 +26,12 @@ from datasets import load_dataset, load_from_disk
 from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-from small_doge.models import DogeConfig, DogeForCausalLM, DogeModel
+from small_doge.models.doge.modeling_doge import DogeConfig, DogeForCausalLM, DogeModel
 import trl
 from trl import (
     ModelConfig,
     ScriptArguments,
-    SFTTrainer,
+    DPOTrainer,
     TrlParser,
     get_kbit_device_map,
     get_peft_config,
@@ -43,9 +43,9 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class SFTConfig(trl.SFTConfig):
+class DPOConfig(trl.DPOConfig):
     """
-    args for small-doge SFT
+    args for small-doge DPO
     """
 
     chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
@@ -57,7 +57,7 @@ class SFTConfig(trl.SFTConfig):
 
 def main(
     script_args: ScriptArguments,
-    training_args: SFTConfig,
+    training_args: DPOConfig,
     model_args: ModelConfig,
 ):
     # Set seed for reproducibility
@@ -94,20 +94,21 @@ def main(
     if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
         logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
 
-    ###############
+    ################
     # Load datasets
-    ###############
+    ################
     if re.match(r'^[^/]+/[^/]+$', script_args.dataset_name):
         dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
     else:
         dataset = load_from_disk(script_args.dataset_name)
 
     def preprocess_function(examples):
-        messages: list = examples["messages"]
+        prompt = ""
         if training_args.system_prompt is not None:
-            messages.insert(0, {"role": "system", "content": training_args.system_prompt})
-        return {"messages": messages}
-    
+            prompt = prompt + training_args.system_prompt + "\n"
+        prompt = prompt + examples["prompt"]
+        return {"prompt": prompt}
+
     dataset = dataset.map(preprocess_function)
 
     ################
@@ -116,7 +117,7 @@ def main(
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code, use_fast=True
     )
-    tokenizer.padding_side = "right"
+    tokenizer.padding_side = "left"
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -139,11 +140,18 @@ def main(
     )
     training_args.model_init_kwargs = model_kwargs
 
+    model = model_args.model_name_or_path
+    ref_model = model
+
+    if model_args.use_peft is True:
+        ref_model = None
+
     ############################
-    # Initialize the SFT Trainer
+    # Initialize the DPO Trainer
     ############################
-    trainer = SFTTrainer(
-        model=model_args.model_name_or_path,
+    trainer = DPOTrainer(
+        model=model,
+        ref_model=ref_model,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
@@ -211,9 +219,6 @@ def main(
     model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")
     model.save_pretrained(f"{training_args.output_dir}")
 
-    #############
-    # push to hub
-    #############
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
         trainer.push_to_hub(**kwargs)
@@ -222,6 +227,6 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = TrlParser((ScriptArguments, SFTConfig, ModelConfig))
+    parser = TrlParser((ScriptArguments, DPOConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
     main(script_args, training_args, model_args)
