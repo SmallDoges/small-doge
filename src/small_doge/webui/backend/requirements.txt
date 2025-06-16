@@ -1,0 +1,50 @@
+# Core FastAPI and web framework dependencies
+fastapi>=0.115.7
+uvicorn[standard]>=0.34.2
+pydantic>=2.10.6
+python-multipart>=0.0.20
+
+# HTTP client libraries
+requests>=2.32.4
+aiohttp>=3.11.11
+aiofiles>=24.1.0
+
+# Authentication and security
+python-jose[cryptography]>=3.4.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.3.0
+PyJWT[crypto]>=2.10.1
+
+# Database
+sqlalchemy>=2.0.38
+alembic>=1.14.0
+
+# AI and ML libraries
+torch>=2.0.0
+transformers>=4.40.0
+accelerate>=0.30.0
+sentencepiece>=0.2.0
+tokenizers>=0.19.0
+huggingface-hub>=0.20.0
+datasets>=2.16.0
+
+# Utilities
+python-dotenv>=1.0.1
+click>=8.1.7
+rich>=13.9.4
+loguru>=0.7.3
+
+# Development dependencies (optional)
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+black>=24.0.0
+isort>=5.13.0
+flake8>=7.0.0
+
+# Optional: GPU support (uncomment if using CUDA)
+# torch-audio>=2.0.0
+# torchaudio>=2.0.0
+
+# Optional: Additional model support
+# sentence-transformers>=3.0.0
+# einops>=0.8.0
