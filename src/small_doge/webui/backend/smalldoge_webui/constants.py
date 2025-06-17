@@ -115,10 +115,8 @@ class DEFAULTS:
 class MODEL_CONFIG:
     # SmallDoge Models - synchronized with frontend
     SMALLDOGE_MODELS = [
-        "SmallDoge/Doge-160M",
-        "SmallDoge/Doge-60M",
+        "SmallDoge/Doge-320M-Instruct",
         "SmallDoge/Doge-160M-Instruct",
-        "SmallDoge/Doge-320M",
     ]
     
     # Supported HuggingFace Tasks
