@@ -23,7 +23,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, status, Query
 from pydantic import BaseModel
 
-from smalldoge_webui.utils.models import (
+from small_doge.webui.backend.smalldoge_webui.utils.models import (
     search_models_by_task,
     get_available_task_categories,
     check_huggingface_model_compatibility,
@@ -31,8 +31,8 @@ from smalldoge_webui.utils.models import (
     get_popular_models_by_category,
     validate_and_load_huggingface_model
 )
-from smalldoge_webui.utils.huggingface_integration import search_huggingface_models
-from smalldoge_webui.constants import ERROR_MESSAGES
+from small_doge.webui.backend.smalldoge_webui.utils.huggingface_integration import search_huggingface_models
+from small_doge.webui.backend.smalldoge_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 router = APIRouter()

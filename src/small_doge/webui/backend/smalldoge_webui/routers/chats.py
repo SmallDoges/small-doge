@@ -27,9 +27,9 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, status, Request
 from pydantic import BaseModel
 
-from smalldoge_webui.constants import ERROR_MESSAGES
-from smalldoge_webui.internal.db import get_db
-from smalldoge_webui.models.chats import Chats
+from small_doge.webui.backend.smalldoge_webui.constants import ERROR_MESSAGES
+from small_doge.webui.backend.smalldoge_webui.internal.db import get_db
+from small_doge.webui.backend.smalldoge_webui.models.chats import Chats
 
 log = logging.getLogger(__name__)
 router = APIRouter()

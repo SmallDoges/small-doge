@@ -26,7 +26,7 @@ from typing import Generic, Optional, TypeVar, Dict, Any
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
 
-from smalldoge_webui.env import (
+from small_doge.webui.backend.smalldoge_webui.env import (
     DATA_DIR,
     DATABASE_URL,
     ENV,
@@ -37,7 +37,7 @@ from smalldoge_webui.env import (
     DEFAULT_MODELS,
     log,
 )
-from smalldoge_webui.internal.db import Base, get_db_context
+from small_doge.webui.backend.smalldoge_webui.internal.db import Base, get_db_context
 
 
 ####################

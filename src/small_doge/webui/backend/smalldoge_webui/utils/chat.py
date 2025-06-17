@@ -26,7 +26,7 @@ from typing import List, Dict, Any, Optional, AsyncGenerator
 from fastapi import Request
 from fastapi.responses import StreamingResponse
 
-from smalldoge_webui.models.chats import (
+from small_doge.webui.backend.smalldoge_webui.models.chats import (
     ChatMessage, 
     ChatCompletionRequest, 
     ChatCompletionResponse,
@@ -34,14 +34,15 @@ from smalldoge_webui.models.chats import (
     MessageModel,
     ChatModel
 )
-from smalldoge_webui.models.models import ModelParams
+from small_doge.webui.backend.smalldoge_webui.models.models import ModelParams
 # User model removed - open access WebUI
-from smalldoge_webui.utils.transformers_inference import (
+from small_doge.webui.backend.smalldoge_webui.utils.transformers_inference import (
     create_chat_completion_response
 )
-from smalldoge_webui.utils.models import ensure_model_loaded
-from smalldoge_webui.utils.models import is_model_loaded, validate_model_id
-from smalldoge_webui.constants import ERROR_MESSAGES, MESSAGE_ROLES
+from small_doge.webui.backend.smalldoge_webui.utils.models import ensure_model_loaded
+from small_doge.webui.backend.smalldoge_webui.utils.models import is_model_loaded, validate_model_id
+from small_doge.webui.backend.smalldoge_webui.utils.task_manager import task_manager
+from small_doge.webui.backend.smalldoge_webui.constants import ERROR_MESSAGES, MESSAGE_ROLES
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ async def generate_chat_completion(
     bypass_filter: bool = False
 ) -> StreamingResponse:
     """
-    Generate chat completion response
+    Generate chat completion response with cancellation support
 
     Args:
         request: FastAPI request object
@@ -80,14 +81,25 @@ async def generate_chat_completion(
         if not await ensure_model_loaded(chat_request.model):
             raise ValueError(ERROR_MESSAGES.MODEL_LOAD_ERROR(chat_request.model))
         
+        # Create task for cancellation support
+        task_id = task_manager.create_task(
+            model_id=chat_request.model,
+            user_id=None  # Open access - no user tracking
+        )
+        
+        # Add task ID to request for tracking
+        chat_request.task_id = task_id
+        
         # Generate response
         if chat_request.stream:
             return StreamingResponse(
-                stream_chat_completion(chat_request),
-                media_type="text/plain"
+                stream_chat_completion_with_cancellation(chat_request, task_id),
+                media_type="text/plain",
+                headers={"X-Task-ID": task_id}  # Return task ID for cancellation
             )
         else:
-            return await non_stream_chat_completion(chat_request)
+            result = await non_stream_chat_completion_with_cancellation(chat_request, task_id)
+            return result
     
     except Exception as e:
         log.error(f"Chat completion error: {e}")
@@ -147,6 +159,139 @@ async def non_stream_chat_completion(request: ChatCompletionRequest) -> Dict[str
     except Exception as e:
         log.error(f"Non-streaming completion error: {e}")
         raise
+
+
+####################
+# Cancellable Chat Completion Functions
+####################
+
+async def stream_chat_completion_with_cancellation(
+    request: ChatCompletionRequest, 
+    task_id: str
+) -> AsyncGenerator[str, None]:
+    """
+    Stream chat completion response with cancellation support
+    
+    Args:
+        request: Chat completion request
+        task_id: Task identifier for cancellation
+    
+    Yields:
+        str: Server-sent events formatted response chunks
+    """
+    try:
+        # Mark task as started
+        task_manager.start_task(task_id)
+        
+        # Get cancellation event
+        cancellation_event = task_manager.get_cancellation_event(task_id)
+        
+        # Stream with cancellation checks
+        async for chunk in create_chat_completion_response_with_cancellation(
+            request, task_id, stream=True
+        ):
+            # Check for cancellation before yielding
+            if cancellation_event and cancellation_event.is_set():
+                log.info(f"Task {task_id} was cancelled during streaming")
+                yield "data: {\"error\": {\"message\": \"Generation cancelled by user\", \"type\": \"cancellation\", \"code\": \"user_cancelled\"}}\n\n"
+                yield "data: [DONE]\n\n"
+                task_manager.complete_task(task_id, error="User cancelled")
+                return
+            
+            # Format as server-sent event
+            chunk_json = json.dumps(chunk, ensure_ascii=False)
+            yield f"data: {chunk_json}\n\n"
+        
+        # Send final event
+        yield "data: [DONE]\n\n"
+        task_manager.complete_task(task_id)
+    
+    except Exception as e:
+        log.error(f"Streaming error: {e}")
+        error_chunk = {
+            "error": {
+                "message": str(e),
+                "type": "inference_error",
+                "code": "model_error"
+            }
+        }
+        error_json = json.dumps(error_chunk, ensure_ascii=False)
+        yield f"data: {error_json}\n\n"
+        task_manager.complete_task(task_id, error=str(e))
+
+
+async def non_stream_chat_completion_with_cancellation(
+    request: ChatCompletionRequest, 
+    task_id: str
+) -> Dict[str, Any]:
+    """
+    Generate non-streaming chat completion response with cancellation support
+    
+    Args:
+        request: Chat completion request
+        task_id: Task identifier for cancellation
+    
+    Returns:
+        Dict[str, Any]: Complete chat completion response
+    """
+    try:
+        # Mark task as started
+        task_manager.start_task(task_id)
+        
+        response = None
+        async for chunk in create_chat_completion_response_with_cancellation(
+            request, task_id, stream=False
+        ):
+            response = chunk
+            break  # Non-streaming returns single response
+        
+        # Check if task was cancelled
+        if task_manager.is_task_cancelled(task_id):
+            task_manager.complete_task(task_id, error="User cancelled")
+            return {
+                "error": {
+                    "message": "Generation cancelled by user",
+                    "type": "cancellation",
+                    "code": "user_cancelled"
+                }
+            }
+        
+        task_manager.complete_task(task_id, result=response)
+        return response or {}
+    
+    except Exception as e:
+        log.error(f"Non-streaming completion error: {e}")
+        task_manager.complete_task(task_id, error=str(e))
+        raise
+
+
+async def create_chat_completion_response_with_cancellation(
+    request: ChatCompletionRequest,
+    task_id: str,
+    stream: bool = True
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Create chat completion response with periodic cancellation checks
+    
+    Args:
+        request: Chat completion request
+        task_id: Task identifier for cancellation
+        stream: Whether to stream the response
+    
+    Yields:
+        Dict[str, Any]: Response chunks
+    """
+    # Get cancellation event
+    cancellation_event = task_manager.get_cancellation_event(task_id)
+    
+    # Use the existing inference function but with cancellation checks
+    async for chunk in create_chat_completion_response(request, stream=stream):
+        # Check for cancellation before yielding each chunk
+        if cancellation_event and cancellation_event.is_set():
+            log.info(f"Task {task_id} cancelled during generation")
+            return
+        
+        yield chunk
 
 
 ####################

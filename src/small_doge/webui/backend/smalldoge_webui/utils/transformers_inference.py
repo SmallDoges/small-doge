@@ -35,7 +35,7 @@ from transformers import (
 )
 from threading import Thread
 
-from smalldoge_webui.env import (
+from small_doge.webui.backend.smalldoge_webui.env import (
     MODEL_CACHE_DIR, 
     DEVICE, 
     TORCH_DTYPE,
@@ -44,9 +44,9 @@ from smalldoge_webui.env import (
     TOP_P,
     TOP_K
 )
-from smalldoge_webui.constants import MODEL_CONFIG, ERROR_MESSAGES
-from smalldoge_webui.models.chats import ChatMessage, ChatCompletionRequest
-from smalldoge_webui.models.models import ModelParams
+from small_doge.webui.backend.smalldoge_webui.constants import MODEL_CONFIG, ERROR_MESSAGES
+from small_doge.webui.backend.smalldoge_webui.models.chats import ChatMessage, ChatCompletionRequest
+from small_doge.webui.backend.smalldoge_webui.models.models import ModelParams
 
 log = logging.getLogger(__name__)
 

@@ -21,8 +21,8 @@ from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column, String, Integer, JSON, Boolean, Text
 
-from smalldoge_webui.internal.db import Base
-from smalldoge_webui.constants import MODEL_TYPES
+from small_doge.webui.backend.smalldoge_webui.internal.db import Base
+from small_doge.webui.backend.smalldoge_webui.constants import MODEL_TYPES
 
 
 ####################
