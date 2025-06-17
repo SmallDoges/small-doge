@@ -30,14 +30,8 @@ import os
 from pathlib import Path
 import uuid
 from datetime import datetime
+from small_doge.webui.frontend.utils.api_client import SmallDogeAPIClient
 
-# Local imports
-try:
-    # Try relative import first (when run as module)
-    from .utils.api_client import SmallDogeAPIClient
-except ImportError:
-    # Fallback to absolute import (when run directly)
-    from utils.api_client import SmallDogeAPIClient
 
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
@@ -57,6 +51,8 @@ class SmallDogeWebUI:
         self.chat_sessions = {}  # Store multiple chat sessions
         self.current_session_id = None
         self.api_client = SmallDogeAPIClient(BACKEND_URL)
+        self.generation_active = False  # Track if generation is active
+        self.cancel_requested = False  # Track if cancellation was requested
         self.task_categories = []
         self.model_families = {}
         self.featured_models = {}
@@ -385,6 +381,20 @@ class SmallDogeWebUI:
             ["fine-tuned", "efficient"]
         ]
     
+    def cancel_generation(self):
+        """Cancel the current generation"""
+        if self.generation_active:
+            success = self.api_client.cancel_current_generation()
+            self.cancel_requested = True
+            if success:
+                print("🛑 Generation cancelled successfully")
+                return "Generation cancelled"
+            else:
+                print("⚠️ Failed to cancel generation")
+                return "Failed to cancel generation"
+        else:
+            return "No active generation to cancel"
+    
     def chat_completion_streaming(
         self,
         message: str,
@@ -394,29 +404,33 @@ class SmallDogeWebUI:
         max_tokens: int,
         top_p: float
     ) -> Generator[tuple[str, List[dict]], None, None]:
-        """Generate streaming chat completion"""
+        """Generate streaming chat completion with cancellation support"""
         if not message.strip():
             yield "", history
             return
 
-        # Prepare messages for API
-        messages = []
-
-        # Add chat history - convert from Gradio messages format
-        for msg in history:
-            if msg.get("role") == "user":
-                messages.append({"role": "user", "content": msg["content"]})
-            elif msg.get("role") == "assistant":
-                messages.append({"role": "assistant", "content": msg["content"]})
-
-        # Add current message
-        messages.append({"role": "user", "content": message})
-
-        # Add user message to history immediately
-        new_history = history + [{"role": "user", "content": message}]
-        yield "", new_history
+        # Reset and set generation state
+        self.cancel_requested = False
+        self.generation_active = True
 
         try:
+            # Prepare messages for API
+            messages = []
+
+            # Add chat history - convert from Gradio messages format
+            for msg in history:
+                if msg.get("role") == "user":
+                    messages.append({"role": "user", "content": msg["content"]})
+                elif msg.get("role") == "assistant":
+                    messages.append({"role": "assistant", "content": msg["content"]})
+
+            # Add current message
+            messages.append({"role": "user", "content": message})
+
+            # Add user message to history immediately
+            new_history = history + [{"role": "user", "content": message}]
+            yield "", new_history
+
             # Use enhanced API client for streaming
             assistant_message = ""
 
@@ -427,6 +441,12 @@ class SmallDogeWebUI:
                 max_tokens=max_tokens,
                 top_p=top_p
             ):
+                # Check for cancellation
+                if self.cancel_requested:
+                    print("🛑 Generation cancelled by user")
+                    assistant_message += "\n\n[Generation cancelled by user]"
+                    break
+                
                 assistant_message += token
 
                 # Update history with streaming content
@@ -451,6 +471,11 @@ class SmallDogeWebUI:
                 {"role": "assistant", "content": error_msg}
             ]
             yield "", error_history
+        
+        finally:
+            # Reset generation state
+            self.generation_active = False
+            self.cancel_requested = False
     
     def clear_chat(self) -> List[dict]:
         """Clear current chat session"""
@@ -622,6 +647,13 @@ class SmallDogeWebUI:
         .send-button {
             border-radius: 8px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+        }
+        .cancel-button {
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
             border: none;
             color: white;
             font-weight: 600;
@@ -866,6 +898,13 @@ class SmallDogeWebUI:
                             scale=1,
                             elem_classes=["send-button"]
                         )
+                        cancel_btn = gr.Button(
+                            "🛑 Cancel",
+                            variant="stop",
+                            scale=1,
+                            visible=False,  # Hidden by default
+                            elem_classes=["cancel-button"]
+                        )
 
                     # Status and info row
                     with gr.Row():
@@ -920,12 +959,17 @@ class SmallDogeWebUI:
                     return [], "❌ Failed to clear chat"
 
             def show_typing_indicator():
-                """Show typing indicator"""
-                return "🤖 SmallDoge is thinking..."
+                """Show typing indicator and show cancel button"""
+                return "🤖 SmallDoge is thinking...", gr.update(visible=True), gr.update(visible=False)
 
             def hide_typing_indicator():
-                """Hide typing indicator"""
-                return ""
+                """Hide typing indicator and cancel button"""
+                return "", gr.update(visible=False), gr.update(visible=True)
+            
+            def handle_cancel_generation():
+                """Handle cancel button click"""
+                result = self.cancel_generation()
+                return f"🛑 {result}", gr.update(visible=False), gr.update(visible=True)
 
             def update_status():
                 """Update backend status"""
@@ -1102,10 +1146,10 @@ class SmallDogeWebUI:
                 print(f"❌ Error connecting clear button: {e}")
 
             try:
-                # Streaming chat completion with typing indicators
+                # Streaming chat completion with typing indicators and cancel support
                 send_btn.click(
                     show_typing_indicator,
-                    outputs=[typing_indicator]
+                    outputs=[typing_indicator, cancel_btn, send_btn]
                 ).then(
                     self.chat_completion_streaming,
                     inputs=[
@@ -1119,7 +1163,7 @@ class SmallDogeWebUI:
                     outputs=[msg_input, chatbot]
                 ).then(
                     hide_typing_indicator,
-                    outputs=[typing_indicator]
+                    outputs=[typing_indicator, cancel_btn, send_btn]
                 )
                 print("✅ Send button connected")
             except Exception as e:
@@ -1128,7 +1172,7 @@ class SmallDogeWebUI:
             try:
                 msg_input.submit(
                     show_typing_indicator,
-                    outputs=[typing_indicator]
+                    outputs=[typing_indicator, cancel_btn, send_btn]
                 ).then(
                     self.chat_completion_streaming,
                     inputs=[
@@ -1142,11 +1186,21 @@ class SmallDogeWebUI:
                     outputs=[msg_input, chatbot]
                 ).then(
                     hide_typing_indicator,
-                    outputs=[typing_indicator]
+                    outputs=[typing_indicator, cancel_btn, send_btn]
                 )
                 print("✅ Message input submit connected")
             except Exception as e:
                 print(f"❌ Error connecting message input submit: {e}")
+
+            try:
+                # Cancel button handler
+                cancel_btn.click(
+                    handle_cancel_generation,
+                    outputs=[typing_indicator, cancel_btn, send_btn]
+                )
+                print("✅ Cancel button connected")
+            except Exception as e:
+                print(f"❌ Error connecting cancel button: {e}")
 
             # Model search functionality
             try:

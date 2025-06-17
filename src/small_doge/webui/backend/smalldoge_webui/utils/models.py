@@ -20,7 +20,7 @@ Enhanced with HuggingFace Hub integration
 import logging
 from typing import List, Dict, Any, Optional, Union
 
-from smalldoge_webui.utils.transformers_inference import (
+from small_doge.webui.backend.smalldoge_webui.utils.transformers_inference import (
     model_manager,
     load_model as _load_model,
     unload_model as _unload_model,
@@ -29,7 +29,7 @@ from smalldoge_webui.utils.transformers_inference import (
     get_available_models as _get_available_models,
     get_model_info as _get_model_info,
 )
-from smalldoge_webui.utils.huggingface_integration import (
+from small_doge.webui.backend.smalldoge_webui.utils.huggingface_integration import (
     search_huggingface_models,
     get_task_categories,
     check_model_compatibility_public,
@@ -193,7 +193,7 @@ async def load_default_model() -> bool:
     Returns:
         bool: True if default model loaded successfully, False otherwise
     """
-    from smalldoge_webui.env import DEFAULT_MODELS
+    from small_doge.webui.backend.smalldoge_webui.env import DEFAULT_MODELS
     
     default_model = DEFAULT_MODELS.split(",")[0].strip()
     log.info(f"Loading default model: {default_model}")
@@ -378,8 +378,8 @@ async def health_check_model(model_id: str) -> Dict[str, Any]:
             return health_status
         
         # Try a simple inference
-        from smalldoge_webui.models.chats import ChatMessage
-        from smalldoge_webui.utils.transformers_inference import generate_completion
+        from small_doge.webui.backend.smalldoge_webui.models.chats import ChatMessage
+        from small_doge.webui.backend.smalldoge_webui.utils.transformers_inference import generate_completion
         
         test_messages = [
             ChatMessage(role="user", content="Hello")
@@ -582,7 +582,7 @@ async def validate_and_load_huggingface_model(model_id: str) -> Dict[str, Any]:
             available_models = get_available_models()
             if model_id not in available_models:
                 # This is a bit of a hack - we'll modify the global list
-                from smalldoge_webui.constants import MODEL_CONFIG
+                from small_doge.webui.backend.smalldoge_webui.constants import MODEL_CONFIG
                 if model_id not in MODEL_CONFIG.SMALLDOGE_MODELS:
                     MODEL_CONFIG.SMALLDOGE_MODELS.append(model_id)
                     log.info(f"Added {model_id} to available models list")
@@ -613,7 +613,7 @@ def remove_model_from_available(model_id: str) -> bool:
         bool: True if model was removed, False if not found
     """
     try:
-        from smalldoge_webui.constants import MODEL_CONFIG
+        from small_doge.webui.backend.smalldoge_webui.constants import MODEL_CONFIG
         
         if model_id in MODEL_CONFIG.SMALLDOGE_MODELS:
             MODEL_CONFIG.SMALLDOGE_MODELS.remove(model_id)

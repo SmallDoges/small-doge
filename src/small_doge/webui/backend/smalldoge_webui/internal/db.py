@@ -25,8 +25,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
-from smalldoge_webui.env import DATABASE_URL, ENV
-from smalldoge_webui.constants import DB_CONFIG
+from small_doge.webui.backend.smalldoge_webui.env import DATABASE_URL, ENV
+from small_doge.webui.backend.smalldoge_webui.constants import DB_CONFIG
 
 log = logging.getLogger(__name__)
 

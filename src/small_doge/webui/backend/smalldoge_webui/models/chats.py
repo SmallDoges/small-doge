@@ -24,8 +24,8 @@ from sqlalchemy import Column, String, Integer, JSON, Text, Boolean, DateTime, f
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from smalldoge_webui.internal.db import Base
-from smalldoge_webui.constants import MESSAGE_ROLES
+from small_doge.webui.backend.smalldoge_webui.internal.db import Base
+from small_doge.webui.backend.smalldoge_webui.constants import MESSAGE_ROLES
 
 
 ####################
@@ -208,7 +208,7 @@ class MessageForm(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
-    """OpenAI-compatible chat completion request"""
+    """OpenAI-compatible chat completion request with cancellation support"""
     model: str
     messages: List[ChatMessage]
     temperature: Optional[float] = 0.7
@@ -219,6 +219,7 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = 0.0
     frequency_penalty: Optional[float] = 0.0
     user: Optional[str] = None
+    task_id: Optional[str] = None  # For cancellation support
 
 
 class ChatCompletionResponse(BaseModel):

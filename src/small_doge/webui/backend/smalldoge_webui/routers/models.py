@@ -21,9 +21,9 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
-from smalldoge_webui.models.models import ModelResponse, ModelListResponse
+from small_doge.webui.backend.smalldoge_webui.models.models import ModelResponse, ModelListResponse
 # Authentication removed for open source sharing
-from smalldoge_webui.utils.models import (
+from small_doge.webui.backend.smalldoge_webui.utils.models import (
     get_available_models,
     get_loaded_models,
     get_model_status,
@@ -34,7 +34,7 @@ from smalldoge_webui.utils.models import (
     get_model_context_length,
     get_model_info
 )
-from smalldoge_webui.constants import ERROR_MESSAGES
+from small_doge.webui.backend.smalldoge_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -188,7 +188,7 @@ async def remove_model_endpoint(model_id: str):
         dict: Operation results
     """
     try:
-        from smalldoge_webui.utils.models import unload_and_remove_model
+        from small_doge.webui.backend.smalldoge_webui.utils.models import unload_and_remove_model
         
         result = await unload_and_remove_model(model_id)
         

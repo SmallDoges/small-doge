@@ -27,9 +27,9 @@ import requests
 from huggingface_hub import HfApi, model_info
 from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
 
-from smalldoge_webui.env import MODEL_CACHE_DIR
-from smalldoge_webui.constants import ERROR_MESSAGES
-from smalldoge_webui.utils.hf_api import hf_api, search_by_tags, search_by_task, search_models_general
+from small_doge.webui.backend.smalldoge_webui.env import MODEL_CACHE_DIR
+from small_doge.webui.backend.smalldoge_webui.constants import ERROR_MESSAGES
+from small_doge.webui.backend.smalldoge_webui.utils.hf_api import hf_api, search_by_tags, search_by_task, search_models_general
 
 log = logging.getLogger(__name__)
 

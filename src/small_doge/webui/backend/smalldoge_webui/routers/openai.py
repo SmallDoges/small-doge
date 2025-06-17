@@ -25,12 +25,13 @@ from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 
-from smalldoge_webui.models.chats import ChatCompletionRequest
-from smalldoge_webui.models.models import OpenAIModelResponse, OpenAIModelsResponse
+from small_doge.webui.backend.smalldoge_webui.models.chats import ChatCompletionRequest
+from small_doge.webui.backend.smalldoge_webui.models.models import OpenAIModelResponse, OpenAIModelsResponse
 # Authentication removed for open source sharing
-from smalldoge_webui.utils.chat import generate_chat_completion, format_chat_messages, validate_chat_messages
-from smalldoge_webui.utils.models import get_available_models, get_model_capabilities, get_model_context_length
-from smalldoge_webui.constants import ERROR_MESSAGES
+from small_doge.webui.backend.smalldoge_webui.utils.chat import generate_chat_completion, format_chat_messages, validate_chat_messages
+from small_doge.webui.backend.smalldoge_webui.utils.models import get_available_models, get_model_capabilities, get_model_context_length
+from small_doge.webui.backend.smalldoge_webui.utils.task_manager import task_manager
+from small_doge.webui.backend.smalldoge_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -278,6 +279,154 @@ async def create_completion(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ERROR_MESSAGES.MODEL_INFERENCE_ERROR(str(e))
+        )
+
+
+####################
+# Task Management Endpoints
+####################
+
+@router.post("/chat/cancel/{task_id}")
+async def cancel_chat_completion(task_id: str):
+    """
+    Cancel a running chat completion task
+    
+    Args:
+        task_id: Task identifier to cancel
+    
+    Returns:
+        Dict: Cancellation status
+    """
+    try:
+        # Attempt to cancel the task
+        cancelled = await task_manager.cancel_task(task_id)
+        
+        if cancelled:
+            return {
+                "status": "cancelled",
+                "task_id": task_id,
+                "message": "Task cancelled successfully"
+            }
+        else:
+            # Task not found or not cancellable
+            task = task_manager.get_task(task_id)
+            if not task:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Task {task_id} not found"
+                )
+            else:
+                return {
+                    "status": "not_cancelled",
+                    "task_id": task_id,
+                    "current_status": task.status.value,
+                    "message": f"Task cannot be cancelled (current status: {task.status.value})"
+                }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error cancelling task {task_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(str(e))
+        )
+
+
+@router.get("/tasks/{task_id}/status")
+async def get_task_status(task_id: str):
+    """
+    Get the status of a task
+    
+    Args:
+        task_id: Task identifier
+    
+    Returns:
+        Dict: Task status information
+    """
+    try:
+        task = task_manager.get_task(task_id)
+        
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task {task_id} not found"
+            )
+        
+        return {
+            "task_id": task_id,
+            "status": task.status.value,
+            "model_id": task.model_id,
+            "created_at": task.created_at,
+            "started_at": task.started_at,
+            "completed_at": task.completed_at,
+            "error": task.error
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error getting task status {task_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(str(e))
+        )
+
+
+@router.get("/tasks/active")
+async def get_active_tasks():
+    """
+    Get all active tasks
+    
+    Returns:
+        Dict: List of active tasks
+    """
+    try:
+        active_tasks = task_manager.get_active_tasks()
+        
+        return {
+            "active_tasks": [
+                {
+                    "task_id": task.task_id,
+                    "status": task.status.value,
+                    "model_id": task.model_id,
+                    "created_at": task.created_at,
+                    "started_at": task.started_at
+                }
+                for task in active_tasks.values()
+            ],
+            "count": len(active_tasks)
+        }
+    
+    except Exception as e:
+        log.error(f"Error getting active tasks: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(str(e))
+        )
+
+
+@router.get("/tasks/stats")
+async def get_task_stats():
+    """
+    Get task statistics
+    
+    Returns:
+        Dict: Task statistics
+    """
+    try:
+        stats = task_manager.get_task_stats()
+        
+        return {
+            "task_stats": stats,
+            "total_tasks": sum(stats.values())
+        }
+    
+    except Exception as e:
+        log.error(f"Error getting task stats: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(str(e))
         )
 
 

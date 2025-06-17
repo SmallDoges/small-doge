@@ -29,8 +29,8 @@ sys.path.insert(0, str(backend_dir))
 
 try:
     import uvicorn
-    from smalldoge_webui.main import app
-    from smalldoge_webui.env import HOST, PORT, ENV, log
+    from small_doge.webui.backend.smalldoge_webui.main import app
+    from small_doge.webui.backend.smalldoge_webui.env import HOST, PORT, ENV, log
 except ImportError as e:
     print(f"Error importing required modules: {e}")
     print("Please install the required dependencies:")
