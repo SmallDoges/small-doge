@@ -48,12 +48,12 @@ _deps = [
     "einops>=0.8.0",
     "flake8>=6.0.0",
     "hf_transfer>=0.1.4",
-    "huggingface-hub[cli]>=0.19.2,<1.0",
+    "huggingface-hub[cli]>=0.19.2",
     "isort>=5.12.0",
     "latex2sympy2_extended>=1.0.6",
-    "liger_kernel==0.5.3",
+    "liger_kernel>=0.5.3",
     "lighteval",
-    "math-verify==0.5.2",  # Used for math verification in grpo
+    "math-verify>=0.5.2",  # Used for math verification in grpo
     "packaging>=23.0",
     "parameterized>=0.9.0",
     "peft>=0.14.0",
@@ -67,6 +67,26 @@ _deps = [
     "trl",
     "vllm>=0.7.1",
     "wandb>=0.19.1",
+    # WebUI Backend Dependencies
+    "fastapi>=0.115.7",
+    "uvicorn[standard]>=0.34.2",
+    "pydantic>=2.10.6",
+    "python-multipart>=0.0.20",
+    "requests>=2.32.4",
+    "aiohttp>=3.11.11",
+    "aiofiles>=24.1.0",
+    "python-jose[cryptography]>=3.4.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.3.0",
+    "PyJWT[crypto]>=2.10.1",
+    "sqlalchemy>=2.0.38",
+    "alembic>=1.14.0",
+    "python-dotenv>=1.0.1",
+    "click>=8.1.7",
+    "rich>=13.9.4",
+    "loguru>=0.7.3",
+    # WebUI Frontend Dependencies
+    "gradio>=4.0.0",
 ]
 
 # this is a lookup table with items like:
@@ -89,6 +109,15 @@ extras["quality"] = deps_list("ruff", "isort", "flake8")
 extras["eval"] = deps_list("lighteval", "math-verify")
 extras["dev"] = extras["quality"] + extras["tests"] + extras["eval"]
 extras["deepspeed"] = deps_list("deepspeed")
+
+# WebUI specific extras
+extras["webui-backend"] = deps_list(
+    "fastapi", "uvicorn", "pydantic", "python-multipart", "requests", 
+    "aiohttp", "aiofiles", "python-jose", "passlib", "bcrypt", "PyJWT",
+    "sqlalchemy", "alembic", "python-dotenv", "click", "rich", "loguru"
+)
+extras["webui-frontend"] = deps_list("gradio")
+extras["webui"] = extras["webui-backend"] + extras["webui-frontend"]
 
 # core dependencies shared across the whole project - keep this to a bare minimum :)
 install_requires = [
@@ -135,5 +164,5 @@ setup(
         "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
-    keywords=["small-doge", "doge", "small language models", "pytorch", "transformers", "trl", "r1", "sft", "dpo"],
+    keywords=["small-doge", "doge", "small language models", "pytorch", "transformers", "trl", "r1", "sft", "dpo", "webui", "gradio", "fastapi"],
 )
