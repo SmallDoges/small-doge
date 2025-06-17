@@ -26,7 +26,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from smalldoge_webui.env import (
+from small_doge.webui.backend.smalldoge_webui.env import (
     ENV,
     HOST,
     PORT,
@@ -36,10 +36,11 @@ from smalldoge_webui.env import (
     VERSION,
     log
 )
-from smalldoge_webui.constants import ERROR_MESSAGES
-from smalldoge_webui.internal.db import create_tables, check_database_connection
-from smalldoge_webui.utils.models import load_default_model
-from smalldoge_webui.routers import (
+from small_doge.webui.backend.smalldoge_webui.constants import ERROR_MESSAGES
+from small_doge.webui.backend.smalldoge_webui.internal.db import create_tables, check_database_connection
+from small_doge.webui.backend.smalldoge_webui.utils.models import load_default_model
+from small_doge.webui.backend.smalldoge_webui.utils.task_manager import task_manager
+from small_doge.webui.backend.smalldoge_webui.routers import (
     chats_router,
     models_router,
     openai_router,
@@ -70,6 +71,10 @@ async def lifespan(app: FastAPI):
         create_tables()
         log.info("Database initialized successfully")
         
+        # Start task manager
+        await task_manager.start()
+        log.info("Task manager started successfully")
+        
         # Load default model
         try:
             await load_default_model()
@@ -87,6 +92,10 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     log.info(f"Shutting down {WEBUI_NAME}")
+    
+    # Stop task manager
+    await task_manager.stop()
+    log.info("Task manager stopped")
 
 
 ####################

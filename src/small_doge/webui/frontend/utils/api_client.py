@@ -38,6 +38,7 @@ class SmallDogeAPIClient:
         self.hf_api = f"{base_url}/api/v1/huggingface"
         self.session = requests.Session()
         self.session.headers.update({"Content-Type": "application/json"})
+        self._current_task_id = None  # Track current task for cancellation
     
     def get_models(self) -> List[str]:
         """Get available models"""
@@ -94,7 +95,7 @@ class SmallDogeAPIClient:
         max_tokens: int = 2048,
         top_p: float = 0.9
     ) -> Generator[str, None, None]:
-        """Streaming chat completion generator"""
+        """Streaming chat completion generator with cancellation support"""
         try:
             payload = {
                 "model": model,
@@ -112,6 +113,12 @@ class SmallDogeAPIClient:
             )
             response.raise_for_status()
             
+            # Extract task ID from response headers
+            task_id = response.headers.get('X-Task-ID')
+            if task_id:
+                # Store task ID for cancellation
+                self._current_task_id = task_id
+            
             for line in response.iter_lines():
                 if line:
                     line = line.decode('utf-8')
@@ -123,6 +130,12 @@ class SmallDogeAPIClient:
                         
                         try:
                             data = json.loads(data_str)
+                            
+                            # Check for cancellation error
+                            if 'error' in data and data['error'].get('type') == 'cancellation':
+                                log.info("Generation was cancelled by user")
+                                break
+                            
                             if 'choices' in data and data['choices']:
                                 choice = data['choices'][0]
                                 if 'delta' in choice and 'content' in choice['delta']:
@@ -133,6 +146,9 @@ class SmallDogeAPIClient:
         except Exception as e:
             log.error(f"Streaming chat completion error: {e}")
             raise
+        finally:
+            # Clear current task ID
+            self._current_task_id = None
     
     def _process_streaming_response(self, response) -> Dict[str, Any]:
         """Process streaming response for non-generator usage"""
@@ -181,6 +197,57 @@ class SmallDogeAPIClient:
         except Exception as e:
             log.error(f"Error getting model info for {model_id}: {e}")
             return {"id": model_id, "status": "error", "error": str(e)}
+    
+    # Cancellation Support
+    def cancel_current_generation(self) -> bool:
+        """Cancel the current generation task"""
+        if not self._current_task_id:
+            log.warning("No active task to cancel")
+            return False
+        
+        return self.cancel_task(self._current_task_id)
+    
+    def cancel_task(self, task_id: str) -> bool:
+        """Cancel a specific task"""
+        try:
+            response = self.session.post(f"{self.api_base}/chat/cancel/{task_id}")
+            if response.status_code == 200:
+                result = response.json()
+                return result.get('status') == 'cancelled'
+            else:
+                log.error(f"Failed to cancel task {task_id}: {response.status_code}")
+                return False
+        except Exception as e:
+            log.error(f"Error cancelling task {task_id}: {e}")
+            return False
+    
+    def get_task_status(self, task_id: str) -> Dict[str, Any]:
+        """Get status of a specific task"""
+        try:
+            response = self.session.get(f"{self.api_base}/tasks/{task_id}/status")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {"error": f"Failed to get task status: {response.status_code}"}
+        except Exception as e:
+            log.error(f"Error getting task status {task_id}: {e}")
+            return {"error": str(e)}
+    
+    def get_active_tasks(self) -> Dict[str, Any]:
+        """Get all active tasks"""
+        try:
+            response = self.session.get(f"{self.api_base}/tasks/active")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {"error": f"Failed to get active tasks: {response.status_code}"}
+        except Exception as e:
+            log.error(f"Error getting active tasks: {e}")
+            return {"error": str(e)}
+    
+    def get_current_task_id(self) -> Optional[str]:
+        """Get the current task ID"""
+        return self._current_task_id
     
     def get_model_status(self, model_id: str) -> Dict[str, Any]:
         """Get model status"""
