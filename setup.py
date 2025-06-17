@@ -152,6 +152,11 @@ setup(
     extras_require=extras,
     install_requires=install_requires,
     python_requires=">=3.10.9",
+    entry_points={
+        "console_scripts": [
+            "small-doge-webui=small_doge.webui:launch_webui",
+        ],
+    },
     classifiers=[
         "Intended Audience :: Developers",
         "Intended Audience :: Education",

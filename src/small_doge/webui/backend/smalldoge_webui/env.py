@@ -54,7 +54,7 @@ DEFAULT_USER_ROLE = os.environ.get("DEFAULT_USER_ROLE", "user")
 JWT_EXPIRES_IN = os.environ.get("JWT_EXPIRES_IN", "7d")
 
 # Model Configuration
-DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", "SmallDoge/Doge-160M")
+DEFAULT_MODELS = os.environ.get("DEFAULT_MODELS", "SmallDoge/Doge-320M-Instruct")
 MODEL_CACHE_DIR = Path(os.getenv("MODEL_CACHE_DIR", CACHE_DIR / "models")).resolve()
 MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 

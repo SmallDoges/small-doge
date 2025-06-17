@@ -105,18 +105,20 @@ pip install -e '.[webui-frontend]'
 **Launch WebUI:**
 
 ```bash
-# From webui directory
-cd src/small_doge/webui
-python run.py
+# Start WebUI (default: both backend and frontend)
+small-doge-webui
 
 # Development mode with auto-reload
-python run.py --dev
+small-doge-webui --dev
 
-# Backend only
-python run.py --backend-only
+# Start only backend
+small-doge-webui --backend-only
 
-# Frontend only
-python run.py --frontend-only
+# Start only frontend
+small-doge-webui --frontend-only
+
+# Custom host and port
+small-doge-webui --backend-host 127.0.0.1 --backend-port 8000 --frontend-port 7860
 ```
 
 **Access WebUI:**
