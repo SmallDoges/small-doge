@@ -21,10 +21,14 @@ from .chats import router as chats_router
 from .models import router as models_router
 from .openai import router as openai_router
 from .huggingface import router as huggingface_router
+from .datasets import router as datasets_router
+from .training import router as training_router
 
 __all__ = [
     "chats_router",
     "models_router",
     "openai_router",
     "huggingface_router",
+    "datasets_router",
+    "training_router",
 ]
