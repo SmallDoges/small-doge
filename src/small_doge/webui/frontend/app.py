@@ -682,7 +682,7 @@ class SmallDogeWebUI:
         """
 
         with gr.Blocks(
-            title="🐕 SmallDoge WebUI - Complete AI Platform",
+            title="🐕 SmallDoge WebUI - Open Source AI Chat",
             theme=gr.themes.Soft(),
             css=custom_css
         ) as interface:
@@ -693,7 +693,7 @@ class SmallDogeWebUI:
                     gr.Markdown(
                         """
                         # 🐕 SmallDoge WebUI
-                        **Complete AI Platform** - Chat, Train & Deploy with ease!
+                        **Open Source AI Chat Platform** - Real-time streaming responses, no authentication required!
                         """
                     )
                 with gr.Column(scale=1):
@@ -701,10 +701,7 @@ class SmallDogeWebUI:
                         '<div class="model-info">🟢 <strong>Status:</strong> Ready</div>'
                     )
 
-            # Main interface with tabs
-            with gr.Tabs():
-                # Chat Tab (existing functionality)
-                with gr.TabItem("💬 Chat", id="chat"):
+            # Main interface layout
             with gr.Row():
                 # Sidebar for chat management and settings
                 with gr.Column(scale=1, elem_classes=["sidebar"]):

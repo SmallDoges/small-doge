@@ -45,10 +45,16 @@ def launch_webui():
         small-doge-webui --dev
         small-doge-webui --backend-only
         small-doge-webui --frontend-only
+        small-doge-webui --management  # New management interface
     """
     import sys
     import os
     from pathlib import Path
+    
+    # Check if --management flag is provided
+    if "--management" in sys.argv:
+        sys.argv.remove("--management")
+        return launch_management_interface()
     
     # Get the webui directory
     webui_dir = Path(__file__).parent
@@ -73,6 +79,37 @@ def launch_webui():
             sys.path.remove(webui_str)
 
 
+def launch_management_interface():
+    """
+    Launch the dataset and training management interface
+    """
+    import sys
+    import os
+    from pathlib import Path
+    
+    # Get the webui directory
+    webui_dir = Path(__file__).parent
+    
+    # Add webui directory to Python path for proper imports
+    webui_str = str(webui_dir)
+    if webui_str not in sys.path:
+        sys.path.insert(0, webui_str)
+    
+    # Change to webui directory to ensure proper file operations
+    original_cwd = os.getcwd()
+    os.chdir(webui_dir)
+    
+    try:
+        from .frontend.management_app import main
+        return main()
+    finally:
+        # Restore original working directory
+        os.chdir(original_cwd)
+        # Remove from path if we added it
+        if webui_str in sys.path:
+            sys.path.remove(webui_str)
+
+
 def launch_webui_programmatic(*args, **kwargs):
     """
     Programmatic function to launch the WebUI with custom arguments
@@ -85,5 +122,5 @@ def launch_webui_programmatic(*args, **kwargs):
     return main(*args, **kwargs)
 
 
-# Add both functions to exports
-__all__.extend(["launch_webui", "launch_webui_programmatic"]) 
+# Add functions to exports
+__all__.extend(["launch_webui", "launch_webui_programmatic", "launch_management_interface"]) 
