@@ -161,12 +161,52 @@ class TaskManager:
             if not task:
                 return False
             
+            # Don't override CANCELLED status - preserve it
+            if task.status != TaskStatus.CANCELLED:
+                task.status = TaskStatus.FAILED if error else TaskStatus.COMPLETED
+            
+            task.completed_at = time.time()
+            task.result = result
+            task.error = error
+            
+        # Log the actual status (which might be CANCELLED)
+        status_str = task.status.value
+        log.info(f"Task {task_id} {status_str}")
+        return True
+
+    def complete_task_if_not_cancelled(
+        self,
+        task_id: str,
+        result: Optional[Any] = None,
+        error: Optional[str] = None
+    ) -> bool:
+        """
+        Mark task as completed only if it's not already cancelled
+        
+        Args:
+            task_id: Task identifier
+            result: Task result (optional)
+            error: Error message if task failed (optional)
+        
+        Returns:
+            bool: True if task was completed, False if not found or already cancelled
+        """
+        with self._lock:
+            task = self._tasks.get(task_id)
+            if not task:
+                return False
+            
+            # Don't complete if already cancelled
+            if task.status == TaskStatus.CANCELLED:
+                log.debug(f"Task {task_id} already cancelled, not completing")
+                return False
+            
             task.status = TaskStatus.FAILED if error else TaskStatus.COMPLETED
             task.completed_at = time.time()
             task.result = result
             task.error = error
             
-        status_str = "failed" if error else "completed"
+        status_str = task.status.value
         log.info(f"Task {task_id} {status_str}")
         return True
 

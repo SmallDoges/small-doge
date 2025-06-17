@@ -195,7 +195,7 @@ async def stream_chat_completion_with_cancellation(
                 log.info(f"Task {task_id} was cancelled during streaming")
                 yield "data: {\"error\": {\"message\": \"Generation cancelled by user\", \"type\": \"cancellation\", \"code\": \"user_cancelled\"}}\n\n"
                 yield "data: [DONE]\n\n"
-                task_manager.complete_task(task_id, error="User cancelled")
+                # Task status is already CANCELLED, don't override it
                 return
             
             # Format as server-sent event
@@ -217,7 +217,8 @@ async def stream_chat_completion_with_cancellation(
         }
         error_json = json.dumps(error_chunk, ensure_ascii=False)
         yield f"data: {error_json}\n\n"
-        task_manager.complete_task(task_id, error=str(e))
+        # Only mark as failed if not already cancelled
+        task_manager.complete_task_if_not_cancelled(task_id, error=str(e))
 
 
 async def non_stream_chat_completion_with_cancellation(
@@ -247,7 +248,7 @@ async def non_stream_chat_completion_with_cancellation(
         
         # Check if task was cancelled
         if task_manager.is_task_cancelled(task_id):
-            task_manager.complete_task(task_id, error="User cancelled")
+            # Task status is already CANCELLED, don't override it
             return {
                 "error": {
                     "message": "Generation cancelled by user",
@@ -261,7 +262,8 @@ async def non_stream_chat_completion_with_cancellation(
     
     except Exception as e:
         log.error(f"Non-streaming completion error: {e}")
-        task_manager.complete_task(task_id, error=str(e))
+        # Only mark as failed if not already cancelled
+        task_manager.complete_task_if_not_cancelled(task_id, error=str(e))
         raise
 
 
