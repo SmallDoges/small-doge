@@ -80,31 +80,26 @@ smalldoge-webui/
    cd /path/to/small-doge
    ```
 
-2. **Install WebUI dependencies**:
+2. **Install WebUI**:
    ```bash
-   # Install complete WebUI (backend + frontend)
    pip install -e '.[webui]'
-   
-   # Or install components separately:
-   pip install -e '.[webui-backend]'   # Backend only
-   pip install -e '.[webui-frontend]'  # Frontend only
    ```
 
 ### Running the Application
 
-1. **Start the backend server**:
+1. **Launch WebUI**:
    ```bash
-   # Start both backend and frontend
-   python run.py
+   # Start WebUI (both backend and frontend)
+   small-doge-webui
 
    # Development mode with auto-reload
-   python run.py --dev
+   small-doge-webui --dev
 
    # Start only backend
-   python run.py --backend-only
+   small-doge-webui --backend-only
 
    # Start only frontend
-   python run.py --frontend-only
+   small-doge-webui --frontend-only
    ```
 
 2. **Start sharing AI features**:
