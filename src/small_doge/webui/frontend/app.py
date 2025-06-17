@@ -32,7 +32,12 @@ import uuid
 from datetime import datetime
 
 # Local imports
-from utils.api_client import SmallDogeAPIClient
+try:
+    # Try relative import first (when run as module)
+    from .utils.api_client import SmallDogeAPIClient
+except ImportError:
+    # Fallback to absolute import (when run directly)
+    from utils.api_client import SmallDogeAPIClient
 
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
@@ -45,10 +50,8 @@ class SmallDogeWebUI:
 
     def __init__(self):
         self.available_models = [
-            "SmallDoge/Doge-160M",
-            "SmallDoge/Doge-60M", 
+            "SmallDoge/Doge-320M-Instruct",
             "SmallDoge/Doge-160M-Instruct",
-            "SmallDoge/Doge-320M",
         ]  # Synchronized with backend MODEL_CONFIG.SMALLDOGE_MODELS
         self.huggingface_models = []
         self.chat_sessions = {}  # Store multiple chat sessions
@@ -129,7 +132,7 @@ class SmallDogeWebUI:
             'title': f"Chat {len(self.chat_sessions) + 1}",
             'messages': [],
             'created_at': datetime.now().isoformat(),
-            'model': self.available_models[0] if self.available_models else 'SmallDoge/Doge-160M'
+            'model': self.available_models[0] if self.available_models else 'SmallDoge/Doge-320M-Instruct'
         }
         self.current_session_id = session_id
         self.save_chat_history()
@@ -723,7 +726,7 @@ class SmallDogeWebUI:
                     model_dropdown = gr.Dropdown(
                         label="🤖 Model",
                         choices=self.available_models,
-                        value=self.available_models[0] if self.available_models else "SmallDoge/Doge-160M",
+                        value=self.available_models[0] if self.available_models else "SmallDoge/Doge-320M-Instruct",
                         interactive=True
                     )
 
@@ -1210,7 +1213,7 @@ class SmallDogeWebUI:
                 try:
                     # Refresh models
                     models = self.load_models()
-                    default_model = models[0] if models else self.available_models[0] if self.available_models else "SmallDoge/Doge-160M"
+                    default_model = models[0] if models else self.available_models[0] if self.available_models else "SmallDoge/Doge-320M-Instruct"
                     model_update = gr.update(choices=models, value=default_model)
                     
                     # Get chat sessions
@@ -1227,7 +1230,7 @@ class SmallDogeWebUI:
                     return model_update, sessions_update, status_html, model_info_html
                 except Exception as e:
                     print(f"Error loading initial data: {e}")
-                    fallback_model = self.available_models[0] if self.available_models else "SmallDoge/Doge-160M"
+                    fallback_model = self.available_models[0] if self.available_models else "SmallDoge/Doge-320M-Instruct"
                     return (
                         gr.update(choices=self.available_models, value=fallback_model),
                         gr.update(choices=["No chats available"]),
