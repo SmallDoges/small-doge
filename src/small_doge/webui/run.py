@@ -95,8 +95,8 @@ def check_dependencies():
 
     if missing_backend:
         print(f"✗ Missing backend dependencies: {', '.join(missing_backend)}")
-        print("Please install backend dependencies:")
-        print("cd backend && pip install -r requirements.txt")
+        print("Please install WebUI dependencies:")
+        print("pip install -e '.[webui]' or pip install -e '.[webui-backend]'")
         return False
     else:
         print("✓ Backend dependencies found")
@@ -113,8 +113,8 @@ def check_dependencies():
 
     if missing_frontend:
         print(f"✗ Missing frontend dependencies: {', '.join(missing_frontend)}")
-        print("Please install frontend dependencies:")
-        print("cd frontend && pip install -r requirements.txt")
+        print("Please install WebUI dependencies:")
+        print("pip install -e '.[webui]' or pip install -e '.[webui-frontend]'")
         return False
     else:
         print("✓ Frontend dependencies found")
