@@ -87,6 +87,49 @@ cd small-doge
 pip install -e .
 ```
 
+### WebUI Installation
+
+To use the SmallDoge WebUI for model inference, install with WebUI dependencies:
+
+```bash
+# Install with WebUI support
+pip install -e '.[webui]'
+
+# Or install only backend dependencies
+pip install -e '.[webui-backend]'
+
+# Or install only frontend dependencies  
+pip install -e '.[webui-frontend]'
+```
+
+**Launch WebUI:**
+
+```bash
+# From webui directory
+cd src/small_doge/webui
+python run.py
+
+# Development mode with auto-reload
+python run.py --dev
+
+# Backend only
+python run.py --backend-only
+
+# Frontend only
+python run.py --frontend-only
+```
+
+**Access WebUI:**
+- 🌐 **Frontend**: http://localhost:7860
+- 📡 **Backend API**: http://localhost:8000  
+- 📚 **API Documentation**: http://localhost:8000/docs
+
+The WebUI provides:
+- ✨ **Zero Authentication**: Start chatting immediately  
+- 💬 **Real-time Streaming**: Live token-by-token responses
+- 📱 **Modern UI**: Enhanced Gradio interface
+- 🤖 **SmallDoge Optimized**: Built for SmallDoge models with trust_remote_code=True
+- 🔗 **OpenAI Compatible**: Standard API endpoints for integration
 
 ## Quick Start
 
