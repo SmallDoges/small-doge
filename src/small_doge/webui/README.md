@@ -75,21 +75,19 @@ smalldoge-webui/
 
 ### Installation
 
-1. **Clone the repository**:
+1. **Navigate to repository root**:
    ```bash
-   cd webui
+   cd /path/to/small-doge
    ```
 
-2. **Install backend dependencies**:
+2. **Install WebUI dependencies**:
    ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
-
-3. **Install frontend dependencies**:
-   ```bash
-   cd ../frontend
-   pip install -r requirements.txt
+   # Install complete WebUI (backend + frontend)
+   pip install -e '.[webui]'
+   
+   # Or install components separately:
+   pip install -e '.[webui-backend]'   # Backend only
+   pip install -e '.[webui-frontend]'  # Frontend only
    ```
 
 ### Running the Application
@@ -178,7 +176,8 @@ Main API Categories:
 
 1. **Install development dependencies**:
    ```bash
-   pip install pytest black isort flake8
+   # Development dependencies are included in the main package
+   pip install -e '.[dev,webui]'
    ```
 
 2. **Run tests**:
