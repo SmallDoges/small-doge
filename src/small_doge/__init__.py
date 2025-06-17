@@ -44,6 +44,14 @@ from .trainer.doge2 import (
     doge2_tokenizer_trainer,
 )
 
+# WebUI components (optional - only if webui dependencies are installed)
+try:
+    from . import webui
+    from .webui import launch_webui_programmatic as launch_webui
+    _webui_available = True
+except ImportError:
+    _webui_available = False
+
 __all__ = [
     "DogeConfig",
     "DogeForCausalLM",
@@ -66,3 +74,7 @@ __all__ = [
     "doge2_grpo_trainer",
     "doge2_tokenizer_trainer",
 ]
+
+# Add WebUI exports if available
+if _webui_available:
+    __all__.extend(["webui", "launch_webui"])
