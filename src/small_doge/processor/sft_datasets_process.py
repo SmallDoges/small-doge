@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from typing import List, Dict, Optional, Union, Callable
+import json
 import logging
 import warnings
 import re
@@ -32,6 +33,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def validate_dataset_ratios(datasets_and_ratios: List[Dict[str, float]]) -> None:
+    """Validate that dataset ratios are properly formatted and sum to 1.0."""
+    if not datasets_and_ratios:
+        raise ValueError("datasets_and_ratios cannot be empty")
+    
+    total_ratio = 0.0
+    for dataset_dict in datasets_and_ratios:
+        if not isinstance(dataset_dict, dict) or len(dataset_dict) != 1:
+            raise ValueError("Each item in datasets_and_ratios must be a dictionary with exactly one key-value pair")
+        
+        ratio = list(dataset_dict.values())[0]
+        if not isinstance(ratio, (int, float)) or ratio <= 0:
+            raise ValueError(f"Ratio must be a positive number, got {ratio}")
+        
+        total_ratio += ratio
+    
+    if abs(total_ratio - 1.0) > 1e-6:
+        raise ValueError(f"Total ratio must be 1.0, but got {total_ratio}. Please check your ratios.")
+
+
+def validate_tokenizer(tokenizer: PreTrainedTokenizerBase) -> None:
+    """Validate tokenizer configuration."""
+    if tokenizer.pad_token is None and tokenizer.eos_token is not None:
+        logger.warning("Tokenizer has no pad_token, using eos_token as pad_token")
+        tokenizer.pad_token = tokenizer.eos_token
+
+
 def prepare_dataset(
     dataset: Union[Dataset, IterableDataset],
     dataset_name: str,
@@ -41,6 +69,7 @@ def prepare_dataset(
     packing: Optional[bool],
     formatting_func: Optional[Callable[[dict], str]],
     dataset_num_proc: Optional[int],
+    tools: Optional[List[dict]] = None,
 ) -> Union[Dataset, IterableDataset]:
     # Convert the dataset to an IterableDataset if it is a ConstantLengthDataset
     if isinstance(dataset, ConstantLengthDataset):
@@ -94,32 +123,37 @@ def prepare_dataset(
             maybe_convert_to_chatml,
             remove_columns="conversations" if "conversations" in column_names else None,
             **map_kwargs,
-        )
-
-        # Apply the chat template if needed
+        )   # Apply the chat template if needed
         if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
             map_kwargs["desc"] = f"Applying chat template to {dataset_name} dataset"
         column_names = next(iter(dataset)).keys()
         dataset = dataset.map(
             maybe_apply_chat_template,
-            fn_kwargs={"tokenizer": processing_class},
+            fn_kwargs={"tokenizer": processing_class, "tools": tools},
             remove_columns="messages" if "messages" in column_names else None,  # renamed to "text"
             **map_kwargs,
-        )
-
-        # Tokenize the dataset if needed
+        )   # Tokenize the dataset if needed
         if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
             map_kwargs["desc"] = f"Tokenizing {dataset_name} dataset"
 
         def tokenize(example, processing_class, dataset_text_field):
-            processed = processing_class(text=example[dataset_text_field])
-            if (
-                processing_class.eos_token_id is not None
-                and processed["input_ids"][-1] != processing_class.eos_token_id
-            ):
-                processed["input_ids"] = processed["input_ids"] + [processing_class.eos_token_id]
-                processed["attention_mask"] = processed["attention_mask"] + [1]
-            return processed
+            try:
+                processed = processing_class(text=example[dataset_text_field])
+                if (
+                    processing_class.eos_token_id is not None
+                    and len(processed["input_ids"]) > 0
+                    and processed["input_ids"][-1] != processing_class.eos_token_id
+                ):
+                    processed["input_ids"] = processed["input_ids"] + [processing_class.eos_token_id]
+                    processed["attention_mask"] = processed["attention_mask"] + [1]
+                return processed
+            except Exception as e:
+                logger.error(f"Error tokenizing example: {e}")
+                # Return empty tokenization on error
+                return {
+                    "input_ids": [processing_class.eos_token_id] if processing_class.eos_token_id is not None else [],
+                    "attention_mask": [1] if processing_class.eos_token_id is not None else []
+                }
 
         dataset = dataset.map(
             tokenize,
@@ -153,6 +187,7 @@ def mix_datasets_by_ratio(
     dataset_num_proc: Optional[int],
     seed: Optional[int] = None,
     cache_dir: Optional[str] = None,
+    tools: Optional[List[dict]] = None,
 ):
     """
     Mix multiple datasets by ratio.
@@ -169,6 +204,7 @@ def mix_datasets_by_ratio(
         dataset_num_proc: Number of processes to use for dataset processing.
         seed: Random seed for dataset shuffling to ensure reproducibility.
         cache_dir: Directory to cache the datasets.
+        tools: Optional tools for chat template.
     
     Returns:
         DatasetDict: A dictionary containing all mixed and processed dataset splits.
@@ -197,13 +233,16 @@ def mix_datasets_by_ratio(
             dataset_num_proc=4,
             seed=42,
             cache_dir="./cache",
+            tools=None,
         )
         print(mixed_dataset)
     ```"""
-
-    # Check if the dataset ratios sum to 1.0
+    # Validate input parameters
+    validate_dataset_ratios(datasets_and_ratios)
+    
+    # Check if the dataset ratios sum to 1.0 (redundant but kept for backwards compatibility)
     total_ratio = sum([list(dataset.values())[0] for dataset in datasets_and_ratios])
-    if total_ratio != 1.0:
+    if abs(total_ratio - 1.0) > 1e-6:
         raise ValueError(f"Total ratio must be 1.0, but got {total_ratio}. Please check your ratios.")
 
     final_mixed_dataset = {}
@@ -234,8 +273,7 @@ def mix_datasets_by_ratio(
         # Process each split of the dataset
         for split_name, split_dataset in dataset.items():
 
-            logger.info(f"Original dataset size for {dataset_name}: {split_name}: {len(split_dataset)}")
-            # Process the dataset from text to input_ids
+            logger.info(f"Original dataset size for {dataset_name}: {split_name}: {len(split_dataset)}")            # Process the dataset from text to input_ids
             split_dataset = prepare_dataset(
                 split_dataset,
                 dataset_name=f"{dataset_name}: {split_name}" if subset_name is None else f"{dataset_name}: {subset_name}: {split_name}",
@@ -245,6 +283,7 @@ def mix_datasets_by_ratio(
                 packing=packing,
                 formatting_func=formatting_func,
                 dataset_num_proc=dataset_num_proc,
+                tools=tools,
             )
             
 
@@ -299,7 +338,8 @@ def mix_datasets_by_ratio(
 
 def main(args):
     # Load the tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(args.cache_dir)
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path)
+    validate_tokenizer(tokenizer)
 
     # Mix datasets
     mixed_dataset = mix_datasets_by_ratio(
@@ -313,6 +353,7 @@ def main(args):
         dataset_num_proc=args.dataset_num_proc,
         seed=args.seed,
         cache_dir=args.cache_dir,
+        tools=args.tools,
     )
     
     # Save the mixed dataset
@@ -321,16 +362,37 @@ def main(args):
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
-    argparser.add_argument("--datasets_and_ratios", type=list[dict[str, float]], required=True)
-    argparser.add_argument("--dataset_save_path", type=str, required=True)
-    argparser.add_argument("--total_sample_size", type=int, required=True)
-    argparser.add_argument("--dataset_text_field", type=str, required=True)
-    argparser.add_argument("--processing_class", type=str, required=True)
-    argparser.add_argument("--max_length", type=int, required=True)
-    argparser.add_argument("--packing", type=bool, required=True)
-    argparser.add_argument("--dataset_num_proc", type=int, required=True)
-    argparser.add_argument("--seed", type=int, default=42)
-    argparser.add_argument("--cache_dir", type=str, default="./cache")
+    argparser.add_argument("--datasets_and_ratios", type=str, required=True,
+                          help="JSON string of list of dictionaries with dataset names and mixing ratios")
+    argparser.add_argument("--dataset_save_path", type=str, required=True,
+                          help="Path to save the mixed dataset")
+    argparser.add_argument("--total_sample_size", type=int, required=True,
+                          help="Total sample size for the mixed training dataset")
+    argparser.add_argument("--dataset_text_field", type=str, required=True,
+                          help="Name of the field in the dataset that contains the text")
+    argparser.add_argument("--tokenizer_name_or_path", type=str, required=True,
+                          help="Tokenizer name or path")
+    argparser.add_argument("--max_length", type=int, default=2048,
+                          help="Maximum length of processed sequences")
+    argparser.add_argument("--packing", action="store_true",
+                          help="Whether to pack sequences for efficiency")
+    argparser.add_argument("--dataset_num_proc", type=int, default=4,
+                          help="Number of processes for dataset processing")
+    argparser.add_argument("--seed", type=int, default=42,
+                          help="Random seed for reproducibility")
+    argparser.add_argument("--cache_dir", type=str, default="./cache",
+                          help="Directory to cache datasets")
+    argparser.add_argument("--tools", type=str, default=None,
+                          help="Tools for chat template (JSON string)")
     args = argparser.parse_args()
+
+    # Parse datasets_and_ratios from JSON string
+    args.datasets_and_ratios = json.loads(args.datasets_and_ratios)
+    
+    # Parse tools if provided
+    if args.tools:
+        args.tools = json.loads(args.tools)
+    else:
+        args.tools = None
 
     main(args)
