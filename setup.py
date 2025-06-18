@@ -140,7 +140,7 @@ setup(
     name="small_doge",
     license="Apache 2.0",
     version=__version__,
-    description="A Family of Dynamic Ultra-Fast Small Language Models Ready for Embodied Artificial General Intelligence!",
+    description="A Family of Dynamic Ultra-Fast Small Language Models!",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="The SmallDoge Team",
