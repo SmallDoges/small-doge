@@ -1,0 +1,52 @@
+# Logging and Output arguments
+log_level: info
+logging_strategy: steps
+logging_steps: 100
+report_to:
+- tensorboard
+- wandb
+save_strategy: steps
+save_steps: 100
+output_dir: data/Doge-20M-MoE-Reason-SFT
+overwrite_output_dir: true
+push_to_hub: true
+private: true
+# token: <your-token>
+hub_model_id: Doge-20M-MoE-Reason-SFT
+hub_strategy: every_save
+
+# Model arguments
+model_name_or_path: SmallDoge/Doge-20M-MoE-Instruct
+model_revision: main
+trust_remote_code: True
+torch_dtype: bfloat16
+
+# Data training arguments
+dataset_name: ./datasets/reason_sft_dataset
+dataset_config: default
+max_seq_length: 2048
+packing: true
+
+# SFT trainer config
+preprocessing_num_workers: 1 # Equal to the number of GPUs you are using
+seed: 233
+do_train: true
+num_train_epochs: 2
+per_device_train_batch_size: 1
+do_eval: true
+eval_strategy: steps
+eval_steps: 100
+per_device_eval_batch_size: 1
+optim: adamw_torch
+learning_rate: 8.0e-4
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs:
+  min_lr_rate: 0.1
+warmup_ratio: 0.1
+weight_decay: 0.01
+gradient_accumulation_steps: 128
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+max_grad_norm: 1.0
+bf16: true
