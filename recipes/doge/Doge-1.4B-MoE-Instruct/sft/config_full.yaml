@@ -24,7 +24,7 @@ torch_dtype: bfloat16
 # Data training arguments
 dataset_name: ./datasets/sft_dataset
 dataset_config: default
-max_seq_length: 2048
+max_seq_length: 8192
 packing: True
 
 # SFT trainer arguments
