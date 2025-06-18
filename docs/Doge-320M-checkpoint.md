@@ -12,7 +12,7 @@ pipeline_tag: text-generation
 
 ![wsd_scheduler](./wsd_scheduler.png)
 
-Doge uses `wsd_scheduler` as the training scheduler, which divides the learning rate into three stages: `warmup`, `stable`, and `decay`. It allows us to continue training on any new dataset from any checkpoint in the `stable stage` without spikes of the training.
+Doge uses `wsd_scheduler` as the training scheduler, which divides the learning rate into three stages: `warmup`, `stable`, and `decay`. It allows us to continue training on any new dataset from any checkpoint in the `stable stage` without spikes in training.
 
 Here are the initial learning rates required to continue training at each checkpoint:
 
