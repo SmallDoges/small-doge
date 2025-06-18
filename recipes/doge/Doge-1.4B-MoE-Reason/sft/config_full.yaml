@@ -7,33 +7,33 @@ report_to:
 - wandb
 save_strategy: steps
 save_steps: 100
-output_dir: data/Doge-1.4B-MoE-Instruct-SFT
+output_dir: data/Doge-1.4B-MoE-Reason-SFT
 overwrite_output_dir: true
 push_to_hub: true
 private: true
 # token: <your-token>
-hub_model_id: Doge-1.4B-MoE-Instruct-SFT
+hub_model_id: Doge-1.4B-MoE-Reason-SFT
 hub_strategy: every_save
 
 # Model arguments
-model_name_or_path: SmallDoge/Doge-1.4B-MoE
+model_name_or_path: SmallDoge/Doge-1.4B-MoE-Instruct
 model_revision: main
 trust_remote_code: True
 torch_dtype: bfloat16
 
 # Data training arguments
-dataset_name: ./datasets/sft_dataset
+dataset_name: ./datasets/reason_sft_dataset
 dataset_config: default
 max_seq_length: 8192
-packing: True
+packing: true
 
-# SFT trainer arguments
+# SFT trainer config
 preprocessing_num_workers: 1 # Equal to the number of GPUs you are using
 seed: 233
-do_train: True
+do_train: true
 num_train_epochs: 2
 per_device_train_batch_size: 1
-do_eval: True
+do_eval: true
 eval_strategy: steps
 eval_steps: 100
 per_device_eval_batch_size: 1
@@ -49,4 +49,4 @@ gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
 max_grad_norm: 1.0
-bf16: True
+bf16: true

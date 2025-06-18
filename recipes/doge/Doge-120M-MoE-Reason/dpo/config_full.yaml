@@ -7,27 +7,26 @@ report_to:
 - wandb
 save_strategy: steps
 save_steps: 100
-output_dir: data/Doge-1.4B-MoE-Instruct-SFT
+output_dir: data/Doge-120M-MoE-Reason-DPO
 overwrite_output_dir: true
 push_to_hub: true
 private: true
 # token: <your-token>
-hub_model_id: Doge-1.4B-MoE-Instruct-SFT
+hub_model_id: Doge-120M-MoE-Reason-DPO
 hub_strategy: every_save
 
 # Model arguments
-model_name_or_path: SmallDoge/Doge-1.4B-MoE
+model_name_or_path: SmallDoge/Doge-120M-MoE-Reason-SFT
 model_revision: main
 trust_remote_code: True
 torch_dtype: bfloat16
 
 # Data training arguments
-dataset_name: ./datasets/sft_dataset
+dataset_name: ./datasets/reason_dpo_dataset
 dataset_config: default
-max_seq_length: 8192
-packing: True
+max_length: 2048
 
-# SFT trainer arguments
+# DPO Trainer arguments
 preprocessing_num_workers: 1 # Equal to the number of GPUs you are using
 seed: 233
 do_train: True
@@ -38,7 +37,7 @@ eval_strategy: steps
 eval_steps: 100
 per_device_eval_batch_size: 1
 optim: adamw_torch
-learning_rate: 2.0e-4
+learning_rate: 6.0e-5
 lr_scheduler_type: cosine_with_min_lr
 lr_scheduler_kwargs:
   min_lr_rate: 0.1

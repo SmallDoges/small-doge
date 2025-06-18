@@ -1,18 +1,18 @@
 # Logging and Output arguments
 log_level: info
 logging_strategy: steps
-logging_steps: 10
+logging_steps: 100
 report_to:
 - tensorboard
 - wandb
 save_strategy: steps
 save_steps: 100
-output_dir: data/Doge-160M-Reason-Distill
+output_dir: data/Doge-160M-Reason-SFT
 overwrite_output_dir: true
 push_to_hub: true
 private: true
 # token: <your-token>
-hub_model_id: Doge-160M-Reason-Distill
+hub_model_id: Doge-160M-Reason-SFT
 hub_strategy: every_save
 
 # Model arguments
@@ -22,17 +22,16 @@ trust_remote_code: True
 torch_dtype: bfloat16
 
 # Data training arguments
-dataset_name: ./datasets/distill_dataset
+dataset_name: ./datasets/reason_sft_dataset
 dataset_config: default
-max_seq_length: 4096
+max_seq_length: 2048
 packing: true
-system_prompt: "As an assistant, you need to thoroughly explore the problem through precise thinking process before providing the final accurate solution. The thinking process includes Analysis, First, Second, Next, Reflection, Finally and Summarizing behavioral steps to develop a well-considered thought process. Please structure your response into two main sections: Thought and Solution. In the Thought section, detail your reasoning process using the specified format: <|begin_of_thought|> {**Analysis:**\\n\\n**First:**\\n\\n**Second:**\\n\\n**Next:**\\n\\n**Reflection:**\\n\\n**Finally:**\\n\\n**Summarizing:**} <|end_of_thought|>. The solution should remain a logical, accurate, concise expression style and detail necessary step needed to reach the conclusion, formatted as follows: <|begin_of_solution|> {**Solution:**} <|end_of_solution|>."
 
 # SFT trainer config
 preprocessing_num_workers: 1 # Equal to the number of GPUs you are using
 seed: 233
 do_train: true
-num_train_epochs: 1
+num_train_epochs: 2
 per_device_train_batch_size: 1
 do_eval: true
 eval_strategy: steps
