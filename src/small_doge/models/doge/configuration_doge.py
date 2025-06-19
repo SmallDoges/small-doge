@@ -5,10 +5,9 @@
 #                          modular_doge.py file directly. One of our CI enforces this.
 #                🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 # coding=utf-8
-# Copyright 2024 Jingze Shi and the HuggingFace Inc. team. All rights reserved.
+# Copyright 2025 Jingze Shi and the HuggingFace Inc. team. All rights reserved.
 #
-# This code is based on the Wonderful Matrices paper implementation.
-# The Doge family of small language models is trained by Jingze Shi.
+# The Doge family of small language models is trained by SmallDoge Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,22 +27,20 @@ from transformers.modeling_rope_utils import rope_config_validation
 class DogeConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`DogeModel`]. It is used to instantiate an Doge
-    model according to the specified arguments, defining the model architecture like [SmallDoge/Doge-20M](https://huggingface.co/SmallDoge/Doge-20M).
+    model according to the specified arguments, defining the model architecture like [SmallDoge/Doge-320M](https://huggingface.co/SmallDoge/Doge-320M).
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
 
     Args:
         vocab_size (`int`, *optional*, defaults to 32768):
-            Vocabulary size of the Doge model. Defines the number of different tokens that can be represented by the `inputs_ids` passed when calling [`DogeModel`]
+            Vocabulary size of the Doge2 model. Defines the number of different tokens that can be represented by the `inputs_ids` passed when calling [`DogeModel`]
         hidden_size (`int`, *optional*, defaults to 1024):
             Dimension of the hidden representations.
         intermediate_size (`int`, *optional*, defaults to 2048):
             Dimension of the MLP representations.
         num_hidden_layers (`int`, *optional*, defaults to 32):
             Number of hidden layers in the Transformer decoder.
-        hidden_bias (`bool`, *optional*, defaults to `False`):
-            Whether to use bias in the hidden layers.
         hidden_dropout (`float`, *optional*, defaults to 0.0):
             Dropout probability for each sequence transformation and state transformation module.
         hidden_act (`str` or `function`, *optional*, defaults to `"silu"`):
@@ -55,14 +52,8 @@ class DogeConfig(PretrainedConfig):
         use_cache (`bool`, *optional*, defaults to `True`):
             Whether or not the model should return the last key/values attentions (not used by all models). Only
             relevant if `config.is_decoder=True`.
-        bos_token_id (`int`, *optional*, defaults to 0):
-            Beginning of stream token id.
-        eos_token_id (`int`, *optional*, defaults to 1):
-            End of stream token id.
-        pad_token_id (`int`, *optional*, defaults to 2):
-            Padding token id.
         tie_word_embeddings (`bool`, *optional*, defaults to `False`):
-            Whether to tie weight embeddings
+            Whether the model's input and output word embeddings should be tied.
         max_position_embeddings (`int`, *optional*, defaults to 2048):
             The maximum sequence length that this model might ever be used with.
         rope_theta (`float`, *optional*, defaults to 10000.0):
@@ -109,18 +100,29 @@ class DogeConfig(PretrainedConfig):
             When converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed by meanpooling all the original heads within that group.
             For more details checkout [this paper](https://arxiv.org/pdf/2305.13245.pdf).
             If it is not specified, will default to `num_attention_heads`.
+        attention_bias (`bool`, defaults to `False`, *optional*, defaults to `False`):
+            Whether to use a bias in the query, key, value and output projection layers during self-attention.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
+        mlp_bias (`bool`, *optional*, defaults to `False`):
+            Whether to use a bias in up_proj, down_proj and gate_proj layers in the MLP layers.
+        sliding_window (`int`, *optional*):
+            Sliding window attention window size. If not specified, will default to `None`.
         keep_window_size (`int`, *optional*, defaults to 2048):
             The window size of tokens that are not dynamically masked, and dynamic masking is only performed when the sequence length exceeds this value.
-        dynamic_mask_ratio (`float`, *optional*, defaults to 0.0):
-            The ratio to control the proportion of the dynamic mask filled with the minimum value. For more details checkout [this paper](https://arxiv.org/pdf/2412.11834).
         is_moe (`bool`, *optional*, defaults to `False`):
-            Whether to use the Cross Domain Mixture of Experts, if `True`, the MoE will inherit the MLP to initialize. For more details checkout [this paper](https://arxiv.org/pdf/2412.11834).
-        num_experts (`int`, *optional*, defaults to 2048):
-            Number of Experts for the Cross Domain Mixture of Experts.
-        num_experts_per_tok (`int`, *optional*, defaults to 8):
+            Whether to use the Cross Domain Mixture of Experts, if `True`, the MoE will inherit the MLP to initialize.
+        num_experts (`int`, *optional*, defaults to 16384):
+            Number of routed experts in the model. This is only used when `is_moe=True`.
+        num_experts_per_tok (`int`, *optional*, defaults to 64):
             Number of selected experts to route per-token.
+        norm_topk_prob (`bool`, *optional*, defaults to `False`):
+            Whether to normalize the topk probabilities.
+        output_router_logits (`bool`, *optional*, defaults to `False`):
+            Whether or not the router logits should be returned by the model. Enabeling this will also
+            allow the model to output the auxiliary loss, including load balancing loss and router z-loss.
+        router_aux_loss_coef (`float`, *optional*, defaults to 0.001):
+            The aux loss factor for the total loss.
 
     ```python
     >>> from transformers import DogeConfig, DogeModel
@@ -144,12 +146,22 @@ class DogeConfig(PretrainedConfig):
         "layers.*.self_attn.v_proj": "colwise",
         "layers.*.self_attn.dt_proj": "rowwise",
         "layers.*.self_attn.o_proj": "rowwise",
-        "layers.*.feed_forward.gate_proj": "colwise",
-        "layers.*.feed_forward.up_proj": "colwise",
-        "layers.*.feed_forward.down_proj": "rowwise",
-        "layers.*.feed_forward.router_gate": "colwise_rep",
-        "layers.*.feed_forward.down_embed": "rowwise_rep",
-        "layers.*.feed_forward.up_embed": "rowwise_rep",
+        "layers.*.input_layernorm.weight": "sequence_parallel",
+        "layers.*.input_residual.weight": "sequence_parallel",
+        "layers.*.post_attention_layernorm.weight": "sequence_parallel",
+        "layers.*.post_attention_residual.weight": "sequence_parallel",
+        "norm.weight": "sequence_parallel",
+        "layers.*.mlp.gate_proj": "colwise",
+        "layers.*.mlp.up_proj": "colwise",
+        "layers.*.mlp.down_proj": "rowwise",
+        "layers.*.mlp.router_gate": "colwise_rep",
+        "layers.*.mlp.down_embed": "rowwise_rep",
+        "layers.*.mlp.up_embed": "rowwise_rep",
+    }
+    base_model_pp_plan = {
+        "embed_tokens": (["input_ids"], ["inputs_embeds"]),
+        "layers": (["hidden_states", "attention_mask"], ["hidden_states"]),
+        "norm": (["hidden_states"], ["hidden_states"]),
     }
 
     def __init__(
@@ -158,24 +170,22 @@ class DogeConfig(PretrainedConfig):
         hidden_size=1024,
         intermediate_size=2048,
         num_hidden_layers=32,
-        hidden_bias=False,
         hidden_dropout=0.0,
         hidden_act="silu",
         initializer_range=0.02,
         rms_norm_eps=1e-06,
         use_cache=True,
-        bos_token_id=0,
-        eos_token_id=1,
-        pad_token_id=2,
         tie_word_embeddings=False,
         max_position_embeddings=2048,
         rope_theta=10000.0,
         rope_scaling=None,
         num_attention_heads=8,
         num_key_value_heads=None,
+        attention_bias=False,
         attention_dropout=0.0,
+        mlp_bias=False,
+        sliding_window=None,
         keep_window_size=2048,
-        dynamic_mask_ratio=0.0,
         is_moe=False,
         num_experts=16384,
         num_experts_per_tok=64,
@@ -189,7 +199,6 @@ class DogeConfig(PretrainedConfig):
         self.intermediate_size = intermediate_size
         self.num_hidden_layers = num_hidden_layers
 
-        self.hidden_bias = hidden_bias
         self.hidden_dropout = hidden_dropout
         self.hidden_act = hidden_act
         self.initializer_range = initializer_range
@@ -201,9 +210,11 @@ class DogeConfig(PretrainedConfig):
         self.rope_scaling = rope_scaling
         self.num_attention_heads = num_attention_heads
         self.num_key_value_heads = num_key_value_heads
+        self.attention_bias = attention_bias
         self.attention_dropout = attention_dropout
+        self.mlp_bias = mlp_bias
+        self.sliding_window = sliding_window
         self.keep_window_size = keep_window_size
-        self.dynamic_mask_ratio = dynamic_mask_ratio
         self.is_moe = is_moe
         self.num_experts = num_experts
         self.num_experts_per_tok = num_experts_per_tok
@@ -222,9 +233,6 @@ class DogeConfig(PretrainedConfig):
             self.num_key_value_heads = num_attention_heads
 
         super().__init__(
-            bos_token_id=bos_token_id,
-            eos_token_id=eos_token_id,
-            pad_token_id=pad_token_id,
             tie_word_embeddings=tie_word_embeddings,
             **kwargs,
         )
