@@ -499,7 +499,7 @@ class SmallDogeAPIClient:
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            print(f"Error getting performance stats: {e}")
+            log.error(f"Error getting performance stats: {e}")
             return {
                 "status": "error",
                 "error": str(e)
