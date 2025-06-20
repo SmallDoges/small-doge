@@ -14,6 +14,7 @@
 
 """
 Model management router for SmallDoge WebUI
+Provides endpoints for model management, health checks, and performance monitoring
 """
 
 import logging
@@ -423,12 +424,25 @@ async def reload_all_models():
 
 @router.get("/performance")
 async def get_performance_stats() -> Dict[str, Any]:
-    """获取系统性能统计信息"""
+    """
+    Get system performance statistics including CPU, GPU, and memory usage
+
+    Returns:
+        Dict[str, Any]: Performance statistics including:
+            - CPU usage percentage
+            - GPU information (if available):
+                - Device name
+                - Usage percentage
+                - Memory usage
+                - Power consumption
+            - System memory usage
+            - Process information
+    """
     try:
-        # 获取CPU使用率（使用interval=0.1来获取更准确的瞬时值）
+        # Get CPU usage (using interval=0.1 for more accurate instantaneous value)
         cpu_percent = psutil.cpu_percent(interval=0.1)
         
-        # 获取GPU信息（如果可用）
+        # Initialize GPU information
         gpu_info = {
             "available": False,
             "name": "CPU",
@@ -437,28 +451,29 @@ async def get_performance_stats() -> Dict[str, Any]:
             "memory_total": 0
         }
         
+        # Get GPU information if available
         if torch.cuda.is_available():
             try:
-                # 获取GPU设备名称
+                # Get GPU device name
                 gpu_info["available"] = True
                 gpu_info["name"] = torch.cuda.get_device_name(0)
                 
-                # 尝试获取GPU使用率和内存信息
+                # Try to get detailed GPU metrics
                 try:
                     import pynvml
                     pynvml.nvmlInit()
                     handle = pynvml.nvmlDeviceGetHandleByIndex(0)
                     
-                    # 获取GPU使用率
+                    # Get GPU utilization
                     utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
                     gpu_info["usage"] = utilization.gpu
                     
-                    # 获取显存使用情况
+                    # Get GPU memory usage
                     memory = pynvml.nvmlDeviceGetMemoryInfo(handle)
                     gpu_info["memory_used"] = memory.used // 1024 // 1024  # Convert to MB
                     gpu_info["memory_total"] = memory.total // 1024 // 1024  # Convert to MB
                     
-                    # 获取功耗信息（如果支持）
+                    # Get power usage if supported
                     try:
                         power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000.0  # Convert to Watts
                         gpu_info["power_usage"] = f"{power:.1f}W"
@@ -467,7 +482,7 @@ async def get_performance_stats() -> Dict[str, Any]:
                         
                 except Exception as e:
                     print(f"Error getting NVIDIA GPU stats: {e}")
-                    # 如果无法获取详细GPU信息，使用PyTorch的基本信息
+                    # Fallback to basic PyTorch GPU information
                     gpu_info["usage"] = 0
                     gpu_info["memory_used"] = torch.cuda.memory_allocated(0) // 1024 // 1024
                     gpu_info["memory_total"] = torch.cuda.get_device_properties(0).total_memory // 1024 // 1024
@@ -475,7 +490,7 @@ async def get_performance_stats() -> Dict[str, Any]:
                 print(f"Error accessing GPU: {e}")
                 gpu_info["available"] = False
         
-        # 获取系统内存使用情况
+        # Get system memory usage
         memory = psutil.virtual_memory()
         memory_info = {
             "total": memory.total // 1024 // 1024,  # MB
@@ -483,7 +498,7 @@ async def get_performance_stats() -> Dict[str, Any]:
             "percent": memory.percent
         }
         
-        # 获取进程信息
+        # Get process information
         process = psutil.Process()
         process_info = {
             "cpu_percent": process.cpu_percent(interval=0.1),
