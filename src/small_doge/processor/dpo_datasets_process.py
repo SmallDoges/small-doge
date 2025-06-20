@@ -19,8 +19,7 @@ import warnings
 import re
 from datasets import Dataset, IterableDataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
-from trl.data_utils import pack_dataset, truncate_dataset, is_conversational, maybe_convert_to_chatml, maybe_apply_chat_template
-from trl.trainer.utils import ConstantLengthDataset
+from trl.data_utils import maybe_extract_prompt, maybe_apply_chat_template
 from argparse import ArgumentParser
 
 
@@ -63,126 +62,131 @@ def validate_tokenizer(tokenizer: PreTrainedTokenizerBase) -> None:
 def prepare_dataset(
     dataset: Union[Dataset, IterableDataset],
     dataset_name: str,
-    dataset_text_field: str,
     processing_class: Union[PreTrainedTokenizerBase],
-    max_length: Optional[int],
-    packing: Optional[bool],
+    max_prompt_length: Optional[int],
+    max_completion_length: Optional[int],
     formatting_func: Optional[Callable[[dict], str]],
     dataset_num_proc: Optional[int],
     tools: Optional[List[dict]] = None,
 ) -> Union[Dataset, IterableDataset]:
-    # Convert the dataset to an IterableDataset if it is a ConstantLengthDataset
-    if isinstance(dataset, ConstantLengthDataset):
-        return dataset
+    """
+    Prepare DPO dataset for training.
     
-    # If the dataset is already preprocessed, skip the processing step
-    column_names = list(next(iter(dataset)).keys())
-    is_processed = "input_ids" in column_names
-
+    Args:
+        dataset: The dataset to prepare.
+        dataset_name: Name of the dataset for logging.
+        processing_class: Tokenizer class used for processing.
+        max_prompt_length: Maximum length of prompt sequences.
+        max_completion_length: Maximum length of completion sequences.
+        formatting_func: Optional formatting function.
+        dataset_num_proc: Number of processes for dataset processing.
+        tools: Optional tools for chat template.
+    
+    Returns:
+        Prepared dataset with tokenized prompt, chosen, and rejected sequences.
+    """
     # Build the kwargs for the `map` function
-    map_kwargs = {}
-    if isinstance(dataset, Dataset):  # InterableDataset does not support num_proc
+    map_kwargs = {"writer_batch_size": 10}
+    if isinstance(dataset, Dataset):  # IterableDataset does not support num_proc
         map_kwargs["num_proc"] = dataset_num_proc
     
-    # Apply the formatting function if any
-    if formatting_func is not None and is_processed:
-        warnings.warn(
-            "You passed a dataset that is already processed (contains an `input_ids` field) together with a "
-            "formatting function. Therefore `formatting_func` will be ignored. Either remove the "
-            "`formatting_func` or pass a dataset that is not already processed.",
-            UserWarning,
+    # Check if dataset has required columns for DPO
+    first_example = next(iter(dataset))
+    required_columns = ["prompt", "chosen", "rejected"]
+    missing_columns = [col for col in required_columns if col not in first_example.keys()]
+    
+    if missing_columns:
+        raise ValueError(
+            f"DPO dataset must contain columns: {required_columns}. "
+            f"Missing columns: {missing_columns}. "
+            f"Available columns: {list(first_example.keys())}"
         )
     
-    if formatting_func is not None and not is_processed:
+    # Apply the formatting function if any
+    if formatting_func is not None:
         if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
             map_kwargs["desc"] = f"Applying formatting function to {dataset_name} dataset"
 
         batched = isinstance(formatting_func(next(iter(dataset))), list)
 
         def _func(example):
-            return {"text": formatting_func(example)}
+            formatted = formatting_func(example)
+            if isinstance(formatted, dict):
+                return formatted
+            else:
+                # If formatting function returns a string, assume it's for prompt
+                return {"prompt": formatted, "chosen": example.get("chosen", ""), "rejected": example.get("rejected", "")}
 
         dataset = dataset.map(_func, batched=batched, **map_kwargs)
 
-    # If the dataset is prompt-completion, convert it to language modeling type
-    first_example = next(iter(dataset))
-    if "prompt" in first_example.keys() and "completion" in first_example.keys():
-        key = "messages" if is_conversational(first_example) else "text"
+    # Extract prompt if needed
+    if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
+        map_kwargs["desc"] = f"Extracting prompt in {dataset_name} dataset"
+    dataset = dataset.map(maybe_extract_prompt, **map_kwargs)
 
-        def concat_prompt_completion(example):
-            return {key: example["prompt"] + example["completion"]}
+    # Apply the chat template if needed
+    if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
+        map_kwargs["desc"] = f"Applying chat template to {dataset_name} dataset"
+    dataset = dataset.map(
+        maybe_apply_chat_template, 
+        fn_kwargs={"tokenizer": processing_class, "tools": tools}, 
+        **map_kwargs
+    )   # Tokenize the dataset
+    if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
+        map_kwargs["desc"] = f"Tokenizing {dataset_name} dataset"
 
-        dataset = dataset.map(concat_prompt_completion, remove_columns=["prompt", "completion"])
-    
-    if not is_processed:
-        # Convert the dataset to ChatML if needed
-        if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
-            map_kwargs["desc"] = f"Converting {dataset_name} dataset to ChatML"
-        column_names = next(iter(dataset)).keys()
-        dataset = dataset.map(
-            maybe_convert_to_chatml,
-            remove_columns="conversations" if "conversations" in column_names else None,
-            **map_kwargs,
-        )   # Apply the chat template if needed
-        if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
-            map_kwargs["desc"] = f"Applying chat template to {dataset_name} dataset"
-        column_names = next(iter(dataset)).keys()
-        dataset = dataset.map(
-            maybe_apply_chat_template,
-            fn_kwargs={"tokenizer": processing_class, "tools": tools},
-            remove_columns="messages" if "messages" in column_names else None,  # renamed to "text"
-            **map_kwargs,
-        )   # Tokenize the dataset if needed
-        if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
-            map_kwargs["desc"] = f"Tokenizing {dataset_name} dataset"
+    def tokenize_row(features):
+        """Tokenize DPO dataset row."""
+        try:
+            tokenizer = processing_class
+            
+            # Tokenize prompt, chosen, and rejected sequences
+            prompt_input_ids = tokenizer(features["prompt"], add_special_tokens=False)["input_ids"]
+            chosen_input_ids = tokenizer(features["chosen"], add_special_tokens=False)["input_ids"]
+            rejected_input_ids = tokenizer(features["rejected"], add_special_tokens=False)["input_ids"]
 
-        def tokenize(example, processing_class, dataset_text_field):
-            try:
-                processed = processing_class(text=example[dataset_text_field])
-                if (
-                    processing_class.eos_token_id is not None
-                    and len(processed["input_ids"]) > 0
-                    and processed["input_ids"][-1] != processing_class.eos_token_id
-                ):
-                    processed["input_ids"] = processed["input_ids"] + [processing_class.eos_token_id]
-                    processed["attention_mask"] = processed["attention_mask"] + [1]
-                return processed
-            except Exception as e:
-                logger.error(f"Error tokenizing example: {e}")
-                # Return empty tokenization on error
-                return {
-                    "input_ids": [processing_class.eos_token_id] if processing_class.eos_token_id is not None else [],
-                    "attention_mask": [1] if processing_class.eos_token_id is not None else []
-                }
+            # Add EOS token to chosen and rejected sequences
+            if tokenizer.eos_token_id is not None:
+                chosen_input_ids = chosen_input_ids + [tokenizer.eos_token_id]
+                rejected_input_ids = rejected_input_ids + [tokenizer.eos_token_id]
 
-        dataset = dataset.map(
-            tokenize,
-            fn_kwargs={"processing_class": processing_class, "dataset_text_field": dataset_text_field},
-            **map_kwargs,
-        )
+            # Truncate sequences if needed
+            if max_prompt_length is not None:
+                prompt_input_ids = prompt_input_ids[-max_prompt_length:]
+            if max_completion_length is not None:
+                chosen_input_ids = chosen_input_ids[:max_completion_length]
+                rejected_input_ids = rejected_input_ids[:max_completion_length]
 
-    # Pack or truncate
-    if packing:
-        if max_length is None:
-            raise ValueError("When packing is enabled, `max_length` can't be `None`.")
-        if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
-            map_kwargs["desc"] = f"Packing {dataset_name} dataset"
-        dataset = dataset.select_columns("input_ids")
-        dataset = pack_dataset(dataset, max_length, map_kwargs)
-    elif max_length is not None:
-        if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
-            map_kwargs["desc"] = f"Truncating {dataset_name} dataset"
-        dataset = truncate_dataset(dataset, max_length, map_kwargs)
+            return {
+                "prompt_input_ids": prompt_input_ids,
+                "chosen_input_ids": chosen_input_ids,
+                "rejected_input_ids": rejected_input_ids,
+            }
+        except Exception as e:
+            logger.error(f"Error tokenizing DPO example: {e}")
+            # Return empty tokenization on error
+            eos_token = [tokenizer.eos_token_id] if tokenizer.eos_token_id is not None else []
+            return {
+                "prompt_input_ids": eos_token,
+                "chosen_input_ids": eos_token,
+                "rejected_input_ids": eos_token,
+            }
+
+    dataset = dataset.map(
+        tokenize_row,
+        remove_columns=["prompt", "chosen", "rejected"],
+        **map_kwargs,
+    )
+
     return dataset
 
 
 def mix_datasets_by_ratio(
     datasets_and_ratios: List[Dict[str, float]],
     total_sample_size: int,
-    dataset_text_field: str,
     processing_class: Union[PreTrainedTokenizerBase],
-    max_length: Optional[int],
-    packing: Optional[bool],
+    max_prompt_length: Optional[int],
+    max_completion_length: Optional[int],
     formatting_func: Optional[Callable[[dict], str]],
     dataset_num_proc: Optional[int],
     seed: Optional[int] = None,
@@ -190,17 +194,16 @@ def mix_datasets_by_ratio(
     tools: Optional[List[dict]] = None,
 ):
     """
-    Mix multiple datasets by ratio.
+    Mix multiple DPO datasets by ratio.
 
     Args:
         datasets_and_ratios: List of dictionaries, each containing a dataset and its ratio.
             Each dictionary contains one key-value pair where key is the dataset name and value is the mixing ratio.
         total_sample_size: Total sample size for the mixed training dataset.
-        dataset_text_field: Name of the field in the dataset that contains the text.
         processing_class: Tokenizer class used for processing the text.
-        max_length: Maximum length of processed sequences. Set to None for no limit.
-        packing: Whether to pack sequences for efficiency.
-        formatting_func: Optional formatting function to convert dataset entries to the desired text format.
+        max_prompt_length: Maximum length of prompt sequences. Set to None for no limit.
+        max_completion_length: Maximum length of completion sequences. Set to None for no limit.
+        formatting_func: Optional formatting function to convert dataset entries to the desired format.
         dataset_num_proc: Number of processes to use for dataset processing.
         seed: Random seed for dataset shuffling to ensure reproducibility.
         cache_dir: Directory to cache the datasets.
@@ -215,7 +218,7 @@ def mix_datasets_by_ratio(
 
         # Define datasets and their mixing ratios
         datasets_and_ratios = [
-            {"SmallDoge/SmallTalks": 1.0},
+            {"SmallDoge/DPO-Pairs": 1.0},
         ]
 
         # Create tokenizer
@@ -225,15 +228,13 @@ def mix_datasets_by_ratio(
         mixed_dataset = mix_datasets_by_ratio(
             datasets_and_ratios=datasets_and_ratios,
             total_sample_size=10000,
-            dataset_text_field="text",
             processing_class=tokenizer,
-            max_length=2048,
-            packing=True,
+            max_prompt_length=512,
+            max_completion_length=512,
             formatting_func=None,
             dataset_num_proc=4,
             seed=42,
             cache_dir="./cache",
-            tools=None,
         )
         print(mixed_dataset)
     ```"""
@@ -273,14 +274,15 @@ def mix_datasets_by_ratio(
         # Process each split of the dataset
         for split_name, split_dataset in dataset.items():
 
-            logger.info(f"Original dataset size for {dataset_name}: {split_name}: {len(split_dataset)}")            # Process the dataset from text to input_ids
+            logger.info(f"Original dataset size for {dataset_name}: {split_name}: {len(split_dataset)}")
+            
+            # Process the dataset for DPO training
             split_dataset = prepare_dataset(
                 split_dataset,
                 dataset_name=f"{dataset_name}: {split_name}" if subset_name is None else f"{dataset_name}: {subset_name}: {split_name}",
-                dataset_text_field=dataset_text_field,
                 processing_class=processing_class,
-                max_length=max_length,
-                packing=packing,
+                max_prompt_length=max_prompt_length,
+                max_completion_length=max_completion_length,
                 formatting_func=formatting_func,
                 dataset_num_proc=dataset_num_proc,
                 tools=tools,
@@ -345,10 +347,9 @@ def main(args):
     mixed_dataset = mix_datasets_by_ratio(
         datasets_and_ratios=args.datasets_and_ratios,
         total_sample_size=args.total_sample_size,
-        dataset_text_field=args.dataset_text_field,
         processing_class=tokenizer,
-        max_length=args.max_length,
-        packing=args.packing,
+        max_prompt_length=args.max_prompt_length,
+        max_completion_length=args.max_completion_length,
         formatting_func=None,
         dataset_num_proc=args.dataset_num_proc,
         seed=args.seed,
@@ -358,7 +359,7 @@ def main(args):
     
     # Save the mixed dataset
     mixed_dataset.save_to_disk(args.dataset_save_path)
-    print(f"Mixed dataset saved to {args.dataset_save_path}")
+    print(f"Mixed DPO dataset saved to {args.dataset_save_path}")
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
@@ -368,14 +369,12 @@ if __name__ == "__main__":
                           help="Path to save the mixed dataset")
     argparser.add_argument("--total_sample_size", type=int, required=True,
                           help="Total sample size for the mixed training dataset")
-    argparser.add_argument("--dataset_text_field", type=str, required=True,
-                          help="Name of the field in the dataset that contains the text")
     argparser.add_argument("--tokenizer_name_or_path", type=str, required=True,
                           help="Tokenizer name or path")
-    argparser.add_argument("--max_length", type=int, default=2048,
-                          help="Maximum length of processed sequences")
-    argparser.add_argument("--packing", action="store_true",
-                          help="Whether to pack sequences for efficiency")
+    argparser.add_argument("--max_prompt_length", type=int, default=512,
+                          help="Maximum length of prompt sequences")
+    argparser.add_argument("--max_completion_length", type=int, default=512,
+                          help="Maximum length of completion sequences")
     argparser.add_argument("--dataset_num_proc", type=int, default=4,
                           help="Number of processes for dataset processing")
     argparser.add_argument("--seed", type=int, default=42,

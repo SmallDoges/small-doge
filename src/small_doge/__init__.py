@@ -78,3 +78,13 @@ __all__ = [
 # Add WebUI exports if available
 if _webui_available:
     __all__.extend(["webui", "launch_webui"])
+
+# Dataset processors
+try:
+    from . import processor
+    from .processor import mix_pt_datasets, mix_sft_datasets, mix_dpo_datasets
+    _processor_available = True
+    __all__.extend(["processor", "mix_pt_datasets", "mix_sft_datasets", "mix_dpo_datasets"])
+except Exception as e:
+    print(f"Warning: Failed to import processor module: {e}")
+    _processor_available = False

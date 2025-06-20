@@ -14,12 +14,16 @@
 
 """
 Model management router for SmallDoge WebUI
+Provides endpoints for model management, health checks, and performance monitoring
 """
 
 import logging
-from typing import List
+from typing import List, Dict, Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+import psutil
+import torch
+import time
 
 from small_doge.webui.backend.smalldoge_webui.models.models import ModelResponse, ModelListResponse
 # Authentication removed for open source sharing
@@ -416,3 +420,100 @@ async def reload_all_models():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ERROR_MESSAGES.DEFAULT(str(e))
         )
+
+
+@router.get("/performance")
+async def get_performance_stats() -> Dict[str, Any]:
+    """
+    Get system performance statistics including CPU, GPU, and memory usage
+
+    Returns:
+        Dict[str, Any]: Performance statistics including:
+            - CPU usage percentage
+            - GPU information (if available):
+                - Device name
+                - Usage percentage
+                - Memory usage
+                - Power consumption
+            - System memory usage
+            - Process information
+    """
+    try:
+        # Get CPU usage (using interval=0.1 for more accurate instantaneous value)
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        
+        # Initialize GPU information
+        gpu_info = {
+            "available": False,
+            "name": "CPU",
+            "usage": cpu_percent,
+            "memory_used": 0,
+            "memory_total": 0
+        }
+        
+        # Get GPU information if available
+        if torch.cuda.is_available():
+            try:
+                # Get GPU device name
+                gpu_info["available"] = True
+                gpu_info["name"] = torch.cuda.get_device_name(0)
+                
+                # Try to get detailed GPU metrics
+                try:
+                    import pynvml
+                    pynvml.nvmlInit()
+                    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                    
+                    # Get GPU utilization
+                    utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
+                    gpu_info["usage"] = utilization.gpu
+                    
+                    # Get GPU memory usage
+                    memory = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                    gpu_info["memory_used"] = memory.used // 1024 // 1024  # Convert to MB
+                    gpu_info["memory_total"] = memory.total // 1024 // 1024  # Convert to MB
+                    
+                    # Get power usage if supported
+                    try:
+                        power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000.0  # Convert to Watts
+                        gpu_info["power_usage"] = f"{power:.1f}W"
+                    except:
+                        gpu_info["power_usage"] = "N/A"
+                        
+                except Exception as e:
+                    print(f"Error getting NVIDIA GPU stats: {e}")
+                    # Fallback to basic PyTorch GPU information
+                    gpu_info["usage"] = 0
+                    gpu_info["memory_used"] = torch.cuda.memory_allocated(0) // 1024 // 1024
+                    gpu_info["memory_total"] = torch.cuda.get_device_properties(0).total_memory // 1024 // 1024
+            except Exception as e:
+                print(f"Error accessing GPU: {e}")
+                gpu_info["available"] = False
+        
+        # Get system memory usage
+        memory = psutil.virtual_memory()
+        memory_info = {
+            "total": memory.total // 1024 // 1024,  # MB
+            "used": memory.used // 1024 // 1024,  # MB
+            "percent": memory.percent
+        }
+        
+        # Get process information
+        process = psutil.Process()
+        process_info = {
+            "cpu_percent": process.cpu_percent(interval=0.1),
+            "memory_percent": process.memory_percent(),
+            "threads": process.num_threads()
+        }
+        
+        return {
+            "status": "success",
+            "timestamp": time.time(),
+            "cpu_percent": cpu_percent,
+            "gpu": gpu_info,
+            "memory": memory_info,
+            "process": process_info
+        }
+    except Exception as e:
+        print(f"Error getting performance stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

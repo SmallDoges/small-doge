@@ -63,7 +63,7 @@ _deps = [
     "sentencepiece>=0.1.99",
     "tensorboard>=2.6.0",
     "torch>=2.5.1",
-    "transformers",
+    "transformers>=4.30.0",  # Updated version requirement
     "trl",
     "vllm>=0.7.1",
     "wandb>=0.19.1",
@@ -87,6 +87,9 @@ _deps = [
     "loguru>=0.7.3",
     # WebUI Frontend Dependencies
     "gradio>=4.0.0",
+    # Additional WebUI Dependencies
+    "nvidia-ml-py3>=7.352.0",  # For GPU monitoring
+    "psutil>=5.8.0",  # For system monitoring
 ]
 
 # this is a lookup table with items like:
@@ -140,7 +143,7 @@ setup(
     name="small_doge",
     license="Apache 2.0",
     version=__version__,
-    description="A Family of Dynamic Ultra-Fast Small Language Models Ready for Embodied Artificial General Intelligence!",
+    description="A Family of Dynamic Ultra-Fast Small Language Models!",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author="The SmallDoge Team",

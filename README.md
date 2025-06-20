@@ -177,6 +177,7 @@ We welcome contributions! Here's how you can help:
 
 - **[📖 Quick Start](./docs/quickstart.md)** - Get started in 5 minutes
 - **[⚙️ Installation](./docs/installation.md)** - Detailed setup guide  
+- **[🗃️ Dataset Processors](./docs/dataset_processors.md)** - Data processing utilities
 - **[🎓 Training](./docs/training.md)** - Complete training pipeline
 - **[🤖 Models](./docs/models.md)** - Architecture and performance
 - **[🌐 WebUI](./docs/webui.md)** - Web interface guide

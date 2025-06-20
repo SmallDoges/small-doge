@@ -24,7 +24,7 @@ Use the advanced dataset processor that handles download, processing, and mixing
 
 ```python
 from transformers import AutoTokenizer
-from small_doge.processor.pt_datasets_process import mix_datasets_by_radio
+from small_doge.processor.pt_datasets_process import mix_datasets_by_ratio
 
 # Define datasets and mixing ratios (fineweb-edu:cosmopedia-v2:python-edu:finemath = 7:2:0.5:0.5)
 datasets_and_ratios = [
@@ -38,7 +38,7 @@ datasets_and_ratios = [
 tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
 
 # One function to download, process, and mix datasets
-mixed_dataset = mix_datasets_by_radio(
+mixed_dataset = mix_datasets_by_ratio(
     datasets_and_ratios=datasets_and_ratios,
     total_sample_size=128000000,  # 128M samples for training
     dataset_text_field="text",
@@ -100,28 +100,36 @@ ACCELERATE_LOG_LEVEL=info accelerate launch \
 
 We provide base Doge models for instruction fine-tuning. See [Doge-SLM collection](https://huggingface.co/collections/SmallDoge/doge-slm-679cc991f027c4a3abbded4a) for available models.
 
-### 1. Prepare Dataset (One-Stop Solution)
+> **Training Pipeline**: Base Model → **SFT** → **DPO** → Final Instruction Model
+> 
+> 1. **SFT (Supervised Fine-tuning)**: Teaches the model to follow instructions and engage in conversations
+> 2. **DPO (Direct Preference Optimization)**: Aligns the model with human preferences for better responses
 
-Use the advanced dataset processor for instruction fine-tuning:
+### 1. Supervised Fine-tuning (SFT)
+
+First, train the model to follow instructions using conversation datasets:
+
+#### Prepare SFT Dataset
 
 ```python
 from transformers import AutoTokenizer
-from small_doge.processor.ft_datasets_process import mix_datasets_by_radio
+from small_doge.processor.sft_datasets_process import mix_datasets_by_ratio
 
-# Define instruction datasets and ratios
+# Define SFT conversation datasets and ratios
 datasets_and_ratios = [
-    {"smoltalk": 0.8},                    # Conversation dataset for SFT
-    {"ultrafeedback_binarized": 0.2},     # Preference dataset for DPO
+    {"smoltalk": 0.6},                    # High-quality conversations
+    {"ultrachat_200k": 0.3},              # Diverse instruction following
+    {"sharegpt_vicuna": 0.1},             # Creative conversations
 ]
 
 # Load Doge tokenizer
 tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
 
-# One function to download, process, and mix instruction datasets
-mixed_dataset = mix_datasets_by_radio(
+# Process SFT datasets with conversation formatting
+sft_dataset = mix_datasets_by_ratio(
     datasets_and_ratios=datasets_and_ratios,
-    total_sample_size=1000000,  # 1M samples for instruction tuning
-    dataset_text_field="text",  # or conversation field
+    total_sample_size=500000,   # 500K conversation samples
+    dataset_text_field="text",
     processing_class=tokenizer,
     max_length=2048,
     apply_chat_template=True,   # Apply chat formatting
@@ -132,14 +140,14 @@ mixed_dataset = mix_datasets_by_radio(
     cache_dir="./cache",
 )
 
-# Save processed instruction dataset
-mixed_dataset.save_to_disk("./datasets/ft_dataset")
+# Save processed SFT dataset
+sft_dataset.save_to_disk("./datasets/sft_dataset")
 ```
 
 **Custom Identity Example:**
 ```python
-def custom_formatting_func(example):
-    """Add custom model identity"""
+def custom_identity_formatting(example):
+    """Add custom model identity to conversations"""
     conversation = [
         {"role": "user", "content": "Who are you?"},
         {"role": "assistant", "content": "I am an AI assistant named Doge, trained by the SmallDoge community based on the Doge architecture."},
@@ -149,25 +157,17 @@ def custom_formatting_func(example):
     return {"conversation": conversation}
 
 # Use with custom formatting
-mixed_dataset = mix_datasets_by_radio(
+sft_dataset = mix_datasets_by_ratio(
     datasets_and_ratios=datasets_and_ratios,
-    formatting_func=custom_formatting_func,
+    formatting_func=custom_identity_formatting,
     # ...other parameters
 )
 ```
 
-**Benefits:**
-- ✅ **Unified workflow**: Same pattern as pre-training
-- ✅ **Chat template**: Automatic conversation formatting
-- ✅ **Identity injection**: Easy to add custom model personality
-- ✅ **Quality control**: Built-in filtering and validation
-
-### 2. Supervised Fine-tuning (SFT)
-
-Train the model to follow instructions:
+#### Start SFT Training
 
 ```bash
-# Run SFT training
+# Run SFT training on base model
 ACCELERATE_LOG_LEVEL=info accelerate launch \
     --config_file recipes/accelerate_configs/single_gpu.yaml \
     ./src/small_doge/trainer/doge/sft.py \
@@ -182,12 +182,46 @@ ACCELERATE_LOG_LEVEL=info accelerate launch \
 | Doge-60M | 2 | 2048 | 6e-4 | 0.25M |
 | Doge-160M | 2 | 2048 | 4e-4 | 0.25M |
 
-### 3. Direct Preference Optimization (DPO)
+### 2. Direct Preference Optimization (DPO)
 
-Align model with human preferences:
+After SFT, align the model with human preferences using preference datasets:
+
+#### Prepare DPO Dataset
+
+```python
+from transformers import AutoTokenizer
+from small_doge.processor.dpo_datasets_process import mix_datasets_by_ratio
+
+# Define DPO preference datasets and ratios
+datasets_and_ratios = [
+    {"ultrafeedback_binarized": 0.7},     # Human preference comparisons
+    {"hhrlhf": 0.2},                      # Helpful/harmless preferences
+    {"nectar": 0.1},                      # High-quality preference pairs
+]
+
+# Load Doge tokenizer
+tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
+
+# Process DPO datasets with preference formatting
+dpo_dataset = mix_datasets_by_ratio(
+    datasets_and_ratios=datasets_and_ratios,
+    total_sample_size=200000,   # 200K preference pairs
+    processing_class=tokenizer,
+    max_prompt_length=512,
+    max_completion_length=512,
+    dataset_num_proc=8,
+    seed=42,
+    cache_dir="./cache",
+)
+
+# Save processed DPO dataset
+dpo_dataset.save_to_disk("./datasets/dpo_dataset")
+```
+
+#### Start DPO Training
 
 ```bash
-# Run DPO training
+# Run DPO training on SFT model
 ACCELERATE_LOG_LEVEL=info accelerate launch \
     --config_file recipes/accelerate_configs/single_gpu.yaml \
     ./src/small_doge/trainer/doge/dpo.py \
@@ -202,6 +236,12 @@ ACCELERATE_LOG_LEVEL=info accelerate launch \
 | Doge-60M | 2 | 1024 | 6e-5 | 0.125M |
 | Doge-160M | 2 | 1024 | 4e-5 | 0.125M |
 
+**Benefits of Two-Stage Training:**
+- ✅ **Clear separation**: SFT for instruction following, DPO for preference alignment
+- ✅ **Specialized processors**: Different data formats handled by appropriate processors
+- ✅ **Modular training**: Can stop after SFT or continue with DPO
+- ✅ **Quality control**: Each stage has specific validation metrics
+
 ## 🧠 Stage 3: Reasoning Fine-tuning (Reasoning Models)
 
 Enhance models with reasoning capabilities using knowledge distillation and reinforcement learning.
@@ -212,7 +252,7 @@ Use the processor for reasoning datasets:
 
 ```python
 from transformers import AutoTokenizer
-from small_doge.processor.ft_datasets_process import mix_datasets_by_radio
+from small_doge.processor.sft_datasets_process import mix_datasets_by_ratio
 
 # Define reasoning datasets and ratios
 datasets_and_ratios = [
@@ -224,7 +264,7 @@ datasets_and_ratios = [
 tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
 
 # Process reasoning datasets with thinking prompts
-mixed_dataset = mix_datasets_by_radio(
+mixed_dataset = mix_datasets_by_ratio(
     datasets_and_ratios=datasets_and_ratios,
     total_sample_size=500000,   # 500K samples for reasoning training
     processing_class=tokenizer,
@@ -252,7 +292,7 @@ def reasoning_formatting_func(example):
     return {"conversation": conversation}
 
 # Use with reasoning formatting
-mixed_dataset = mix_datasets_by_radio(
+mixed_dataset = mix_datasets_by_ratio(
     datasets_and_ratios=datasets_and_ratios,
     formatting_func=reasoning_formatting_func,
     # ...other parameters
