@@ -493,7 +493,7 @@ class SmallDogeAPIClient:
             return {"results": [], "total": 0, "error": str(e)}
     
     def get_performance_stats(self) -> Dict[str, Any]:
-        """获取系统性能统计信息"""
+        """Obtain system performance statistics information"""
         try:
             response = requests.get(f"{self.base_url}/api/v1/models/performance")
             response.raise_for_status()
