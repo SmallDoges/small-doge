@@ -28,7 +28,7 @@ SmallDoge is a family of dynamic, ultra-fast small language models designed for 
 
 <div align="center">
     <img src="./assets/reasoning.gif" alt="Doge-60M-Instruct demo" width="60%"/>
-    <br><em>Doge-60M-Instruct running on i7-11 CPU</em>
+    <br><em>Webui-Doge-320M-Instruct running on i7-11 CPU</em>
 </div>
 
 
