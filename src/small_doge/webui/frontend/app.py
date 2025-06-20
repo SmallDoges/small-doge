@@ -31,6 +31,7 @@ from pathlib import Path
 import uuid
 from datetime import datetime
 from small_doge.webui.frontend.utils.api_client import SmallDogeAPIClient
+from small_doge.webui.frontend.logo_theme import get_logo_html, get_custom_css
 
 
 # Configuration
@@ -57,6 +58,13 @@ class SmallDogeWebUI:
         self.model_families = {}
         self.featured_models = {}
         self.search_results = []
+        self.token_count = 0
+        self.total_tokens = 0  
+        self.last_token_count = 0
+        self.generation_start_time = None
+        self.last_update_time = None
+        self.current_token_speed = 0
+        self.final_speed = 0  
         self.popular_tags = [
             "text-generation", "conversational", "chat", "instruction-following",
             "question-answering", "summarization", "translation", "code-generation",
@@ -395,6 +403,105 @@ class SmallDogeWebUI:
         else:
             return "No active generation to cancel"
     
+    def update_performance_stats(self):
+        """Update performance statistics"""
+        try:
+            current_time = time.time()
+            stats = self.api_client.get_performance_stats()
+            
+            # Debug: Print current status
+            print(f"🔄 Updating performance statistics:")
+            print(f"  - Generation status: {self.generation_active}")
+            print(f"  - Token count: {self.token_count}")
+            print(f"  - Total token count: {self.total_tokens}")
+            print(f"  - Last token count: {self.last_token_count}")
+            print(f"  - Current time: {current_time}")
+            print(f"  - Last update time: {self.last_update_time}")
+            print(f"  - Final speed: {self.final_speed}")
+            
+            # Calculate token speed
+            if self.generation_active:
+                if self.last_update_time is not None:
+                    time_diff = current_time - self.last_update_time
+                    token_diff = self.token_count - self.last_token_count
+                    print(f"  - Time difference: {time_diff:.3f}s")
+                    print(f"  - Token difference: {token_diff}")
+                    if time_diff > 0:
+                        instant_speed = token_diff / time_diff
+                        # Use moving average to smooth speed display
+                        alpha = 0.3  # Smoothing factor
+                        self.current_token_speed = (alpha * instant_speed + 
+                                                  (1 - alpha) * self.current_token_speed)
+                        print(f"  - Instant speed: {instant_speed:.1f} tokens/s")
+                        print(f"  - Smoothed speed: {self.current_token_speed:.1f} tokens/s")
+                
+                self.last_token_count = self.token_count
+                self.last_update_time = current_time
+                display_speed = self.current_token_speed
+            else:
+                # If generation has stopped, display final speed
+                display_speed = self.final_speed
+                print(f"  - Display final speed: {display_speed:.1f} tokens/s")
+                
+            if stats and stats.get("status") == "success":
+                # Update device information
+                gpu_info = stats.get("gpu", {})
+                device_name = gpu_info.get("name", "CPU")
+                device_usage = gpu_info.get("usage", 0) if gpu_info.get("available") else stats.get("cpu_percent", 0)
+                memory_used = gpu_info.get("memory_used", 0)
+                memory_total = gpu_info.get("memory_total", 0)
+                
+                # Update display
+                device_html = f'<div class="stat-box"><span class="stat-label">💻 Device:</span><span class="stat-value">{device_name}</span></div>'
+                usage_html = f'<div class="stat-box"><span class="stat-label">📊 Usage:</span><span class="stat-value">{device_usage:.1f}%'
+                if memory_total > 0:
+                    usage_html += f' ({memory_used}/{memory_total}MB)'
+                usage_html += '</span></div>'
+                speed_html = f'<div class="stat-box"><span class="stat-label">🚀 Speed:</span><span class="stat-value">{display_speed:.1f} tokens/s</span></div>'
+                
+                return speed_html, device_html, usage_html
+            
+            return (
+                f'<div class="stat-box"><span class="stat-label">🚀 Speed:</span><span class="stat-value">{display_speed:.1f} tokens/s</span></div>',
+                '<div class="stat-box"><span class="stat-label">💻 Device:</span><span class="stat-value">-</span></div>',
+                '<div class="stat-box"><span class="stat-label">📊 Usage:</span><span class="stat-value">-</span></div>'
+            )
+        except Exception as e:
+            print(f"❌ Error updating performance statistics: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return (
+                '<div class="stat-box"><span class="stat-label">🚀 Speed:</span><span class="stat-value">Error</span></div>',
+                '<div class="stat-box"><span class="stat-label">💻 Device:</span><span class="stat-value">Error</span></div>',
+                '<div class="stat-box"><span class="stat-label">📊 Usage:</span><span class="stat-value">Error</span></div>'
+            )
+
+    def start_performance_updates(self):
+        """Start performance statistics updates"""
+        self.token_count = 0
+        self.last_token_count = 0
+        self.generation_start_time = time.time()
+        self.last_update_time = self.generation_start_time
+        self.current_token_speed = 0
+        self.final_speed = 0
+        return self.update_performance_stats()
+
+    def stop_performance_updates(self):
+        """Stop performance statistics updates"""
+        self.generation_active = False
+        # Calculate final average speed
+        if self.generation_start_time is not None:
+            total_time = time.time() - self.generation_start_time
+            if total_time > 0:
+                self.final_speed = self.token_count / total_time
+                print(f"  - Calculated final speed: {self.final_speed:.1f} tokens/s")
+        
+        # Update total token count
+        self.total_tokens += self.token_count
+        print(f"  - Updated total token count: {self.total_tokens}")
+        
+        return self.update_performance_stats()
+
     def chat_completion_streaming(
         self,
         message: str,
@@ -412,6 +519,11 @@ class SmallDogeWebUI:
         # Reset and set generation state
         self.cancel_requested = False
         self.generation_active = True
+        self.token_count = 0
+        self.last_token_count = 0
+        self.generation_start_time = time.time()
+        self.last_update_time = self.generation_start_time
+        self.current_token_speed = 0
 
         try:
             # Prepare messages for API
@@ -448,6 +560,8 @@ class SmallDogeWebUI:
                     break
                 
                 assistant_message += token
+                self.token_count += 1
+                print(f"📝 Token received - Count: {self.token_count}")
 
                 # Update history with streaming content
                 updated_history = history + [
@@ -474,9 +588,10 @@ class SmallDogeWebUI:
         
         finally:
             # Reset generation state
+            print(f"✅ Generation completed - Total tokens: {self.token_count}")
             self.generation_active = False
             self.cancel_requested = False
-    
+
     def clear_chat(self) -> List[dict]:
         """Clear current chat session"""
         if self.current_session_id:
@@ -623,124 +738,89 @@ class SmallDogeWebUI:
 
     def create_interface(self) -> gr.Blocks:
         """Create the enhanced Gradio interface"""
-        # Custom CSS for better UI/UX matching open-webui patterns
-        custom_css = """
-        .gradio-container {
-            max-width: 1400px !important;
-            margin: 0 auto;
-        }
-        .chat-container {
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-            background: #ffffff;
-        }
-        .sidebar {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 16px;
-            border: 1px solid #e5e7eb;
-        }
-        .message-input {
-            border-radius: 8px;
-            border: 1px solid #d1d5db;
-        }
-        .send-button {
-            border-radius: 8px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white;
-            font-weight: 600;
-        }
-        .cancel-button {
-            border-radius: 8px;
-            background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
-            border: none;
-            color: white;
-            font-weight: 600;
-        }
-        .model-info {
-            background: #f0f9ff;
-            border: 1px solid #0ea5e9;
-            border-radius: 8px;
-            padding: 12px;
-            margin: 8px 0;
-        }
-        .search-results {
-            max-height: 400px;
-            overflow-y: auto;
-            margin: 8px 0;
-        }
-        .model-result {
-            margin: 8px 0;
-            padding: 12px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            background: #f9fafb;
-            transition: all 0.2s;
-        }
-        .model-result:hover {
-            background: #f3f4f6;
-            border-color: #d1d5db;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .status-indicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        .status-online { background-color: #10b981; }
-        .status-offline { background-color: #ef4444; }
-        .tag-btn {
-            margin: 2px;
-            font-size: 12px;
-            padding: 4px 8px;
-        }
-        .search-section {
-            background: #fafbfc;
-            border: 1px solid #e1e5e9;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 8px 0;
-        }
-        .quick-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin: 8px 0;
-        }
-        """
+        custom_css = get_custom_css()
 
         with gr.Blocks(
             title="🐕 SmallDoge WebUI - Open Source AI Chat",
-            theme=gr.themes.Soft(),
-            css=custom_css
+            theme=gr.themes.Soft(primary_hue="amber", neutral_hue="yellow"),
+            css=custom_css + """
+                /* Adjust left and right box alignment */
+                .main-row {
+                    align-items: stretch !important;
+                    min-height: calc(100vh - 200px) !important;
+                }
+                .sidebar {
+                    background: #fef3c7 !important;
+                    border-radius: 8px !important;
+                    padding: 16px !important;
+                    height: 100% !important;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                }
+                .sidebar-content {
+                    flex-grow: 1 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 16px !important;
+                    min-height: 965px !important;
+                }
+                .chat-container {
+                    background: #fef3c7 !important;
+                    border-radius: 8px !important;
+                    padding: 16px !important;
+                    height: 100% !important;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                }
+                .chat-messages {
+                    flex-grow: 1 !important;
+                    overflow-y: auto !important;
+                }
+                .performance-stats {
+                    margin-top: 8px !important;
+                    margin-bottom: 8px !important;
+                    padding: 8px !important;
+                    background: #fef9c3 !important;
+                    border-radius: 6px !important;
+                }
+                .stat-box {
+                    background: #fef3c7 !important;
+                    padding: 8px 12px !important;
+                    border-radius: 6px !important;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+                    margin: 4px !important;
+                }
+                .input-row {
+                    margin-top: auto !important;
+                }
+                """
         ) as interface:
-
-            # Header with status
-            with gr.Row():
-                with gr.Column(scale=4):
+            # Top logo and title
+            with gr.Row(elem_classes=["header-row"]):
+                with gr.Column(scale=1, elem_classes=["logo-column"]):
+                    gr.HTML(get_logo_html())
+                with gr.Column(scale=3, elem_classes=["title-column"]):
                     gr.Markdown(
                         """
-                        # 🐕 SmallDoge WebUI
-                        **Open Source AI Chat Platform** - Real-time streaming responses, no authentication required!
-                        """
+                        <div class="main-title">
+                            <h1>🐕 SmallDoge WebUI</h1>
+                            <p>Your Smart AI Assistant - Powered by Small Language Models</p>
+                        </div>
+                        """,
                     )
                 with gr.Column(scale=1):
                     status_display = gr.HTML(
                         '<div class="model-info">🟢 <strong>Status:</strong> Ready</div>'
                     )
-
-            # Main interface layout
-            with gr.Row():
-                # Sidebar for chat management and settings
-                with gr.Column(scale=1, elem_classes=["sidebar"]):
+            
+            # Main layout: Chat management and chat area
+            with gr.Row(elem_classes=["main-row"]):
+                # Sidebar: Chat management/settings
+                with gr.Column(scale=1, elem_classes=["sidebar", "sidebar-content"]):
                     gr.Markdown("### 💬 Chat Management")
-
                     new_chat_btn = gr.Button("🆕 New Chat", variant="secondary", size="sm")
-
                     chat_sessions_dropdown = gr.Dropdown(
                         label="📋 Chat History",
                         choices=self.get_chat_sessions_list(),
@@ -748,20 +828,17 @@ class SmallDogeWebUI:
                         interactive=True,
                         allow_custom_value=True
                     )
-
                     with gr.Row():
                         export_btn = gr.Button("📤 Export", size="sm", scale=1)
                         clear_btn = gr.Button("🗑️ Clear", size="sm", scale=1)
-
+                    
                     gr.Markdown("### ⚙️ Model Settings")
-
                     model_dropdown = gr.Dropdown(
                         label="🤖 Model",
                         choices=self.available_models,
                         value=self.available_models[0] if self.available_models else "SmallDoge/Doge-320M-Instruct",
                         interactive=True
                     )
-
                     with gr.Accordion("🎛️ Advanced Parameters", open=False):
                         temperature_slider = gr.Slider(
                             label="🌡️ Temperature",
@@ -771,7 +848,6 @@ class SmallDogeWebUI:
                             step=0.1,
                             info="Controls randomness in responses"
                         )
-
                         max_tokens_slider = gr.Slider(
                             label="📏 Max Tokens",
                             minimum=1,
@@ -780,7 +856,6 @@ class SmallDogeWebUI:
                             step=1,
                             info="Maximum response length"
                         )
-
                         top_p_slider = gr.Slider(
                             label="🎯 Top P",
                             minimum=0.0,
@@ -789,127 +864,154 @@ class SmallDogeWebUI:
                             step=0.05,
                             info="Controls diversity via nucleus sampling"
                         )
-
                     refresh_models_btn = gr.Button("🔄 Refresh Models", size="sm")
-
-                    # Model management buttons
                     with gr.Row():
                         remove_model_btn = gr.Button("🗑️ Remove Model", size="sm", variant="stop")
-                    
                     remove_result_display = gr.HTML("")
-
-                    # Model information display
                     model_info_display = gr.HTML("")
 
-                    # Enhanced HuggingFace Model Search Section
-                    gr.Markdown("### 🔍 Model Discovery")
-                    
-                    with gr.Accordion("🚀 Search HuggingFace Models", open=True):
-                        gr.Markdown("""
-                        **🏷️ Tag-Based Search**: Find models by specific capabilities
-                        
-                        **Popular Tags**: `text-generation`, `conversational`, `chat`, `question-answering`, `code-generation`, `small-model`, `fine-tuned`
-                        """)
-                        
-                        # Quick tag buttons
-                        gr.Markdown("**⚡ Quick Tags:**")
-                        with gr.Row():
-                            tag_btn_1 = gr.Button("text-generation", size="sm", variant="secondary")
-                            tag_btn_2 = gr.Button("conversational", size="sm", variant="secondary")
-                        with gr.Row():
-                            tag_btn_3 = gr.Button("question-answering", size="sm", variant="secondary")
-                            tag_btn_4 = gr.Button("code-generation", size="sm", variant="secondary")
-                        
-                        # Search inputs
-                        search_tags_input = gr.Textbox(
-                            label="🏷️ Tags (comma-separated)",
-                            placeholder="e.g., text-generation, chat, small-model",
-                            value="",
-                            lines=1
-                        )
-                        
-                        search_task_dropdown = gr.Dropdown(
-                            label="📋 Task Type",
-                            choices=[
-                                "", "text-generation", "conversational", "question-answering", 
-                                "summarization", "translation", "text-classification",
-                                "token-classification", "fill-mask", "feature-extraction"
-                            ],
-                            value="",
-                            interactive=True
-                        )
-                        
-                        search_query_input = gr.Textbox(
-                            label="🔎 Keyword Search",
-                            placeholder="e.g., SmallDoge, chat, instruct",
-                            value="",
-                            lines=1
-                        )
-                        
-                        search_limit_slider = gr.Slider(
-                            label="📊 Max Results",
-                            minimum=5,
-                            maximum=50,
-                            value=20,
-                            step=5
-                        )
-                        
-                        search_btn = gr.Button("🔍 Search Models", variant="primary", size="sm")
-                        
-                        # Search results display
-                        search_results_display = gr.HTML("")
-                        
-                        # Model selection from search results
-                        search_results_dropdown = gr.Dropdown(
-                            label="📦 Select Model to Load",
-                            choices=[],
-                            value=None,
-                            interactive=True,
-                            visible=False
-                        )
-                        
-                        load_model_btn = gr.Button("📥 Load Selected Model", variant="secondary", size="sm", visible=False)
-                        load_result_display = gr.HTML("")
-
-                # Main chat area
+                # Chat area
                 with gr.Column(scale=3, elem_classes=["chat-container"]):
+                    # Add chat area title
+                    gr.Markdown(
+                        """
+                        <div style="text-align:center;margin-bottom:12px;">
+                            <h2 style="margin:0;color:#d97706;">💬 Chat Session</h2>
+                            <p style="margin:4px 0 0;color:#4b3f2a;font-size:0.9em;">Start chatting with your AI companion!</p>
+                        </div>
+                        """,
+                        elem_classes=["chat-title"]
+                    )
+                    
                     chatbot = gr.Chatbot(
                         label="💬 Chat",
-                        height=600,
+                        height=500,  # Slightly reduce height, to free up space for title
                         show_label=True,
                         container=True,
                         show_copy_button=True,
                         layout="panel",
-                        type="messages"
+                        type="messages",
+                        elem_classes=["chat-messages"]  # Add class name for selection
                     )
-
-                    with gr.Row():
+                    
+                    # Add performance metrics display area
+                    with gr.Row(elem_classes=["performance-stats"]):
+                        with gr.Column(scale=1):
+                            token_speed = gr.HTML(
+                                '<div class="stat-box"><span class="stat-label">🚀 Token Speed:</span><span class="stat-value">0 tokens/s</span></div>',
+                                elem_classes=["stat-container"],
+                                every=2  # Update every 2 seconds
+                            )
+                        with gr.Column(scale=1):
+                            device_info = gr.HTML(
+                                '<div class="stat-box"><span class="stat-label">💻 Device:</span><span class="stat-value">Loading...</span></div>',
+                                elem_classes=["stat-container"],
+                                every=2
+                            )
+                        with gr.Column(scale=1):
+                            device_usage = gr.HTML(
+                                '<div class="stat-box"><span class="stat-label">📊 Usage:</span><span class="stat-value">0%</span></div>',
+                                elem_classes=["stat-container"],
+                                every=2
+                            )
+                    
+                    with gr.Row(elem_classes=["input-row"]):
                         msg_input = gr.Textbox(
                             label="",
                             placeholder="💭 Type your message here... (Press Enter to send)",
-                            scale=5,
+                            scale=4,
                             lines=2,
                             max_lines=6,
                             elem_classes=["message-input"]
                         )
-                        send_btn = gr.Button(
-                            "🚀 Send",
-                            variant="primary",
-                            scale=1,
-                            elem_classes=["send-button"]
-                        )
-                        cancel_btn = gr.Button(
-                            "🛑 Cancel",
-                            variant="stop",
-                            scale=1,
-                            visible=False,  # Hidden by default
-                            elem_classes=["cancel-button"]
-                        )
-
-                    # Status and info row
+                        with gr.Column(scale=1, elem_classes=["button-column"]):
+                            send_btn = gr.Button(
+                                "🚀 Send",
+                                variant="primary",
+                                size="lg",
+                                elem_classes=["send-button"]
+                            )
+                            cancel_btn = gr.Button(
+                                "🛑 Cancel",
+                                variant="stop",
+                                size="lg",
+                                visible=False,
+                                elem_classes=["cancel-button"]
+                            )
                     with gr.Row():
                         typing_indicator = gr.HTML("")
                         message_info = gr.HTML("")
+
+            # Discovery area (moved to bottom)
+            with gr.Row():
+                with gr.Column(elem_classes=["discovery-panel"]):
+                    gr.Markdown("### �� Model Discovery")
+                    with gr.Accordion("🚀 Search HuggingFace Models", open=True):
+                        gr.Markdown("""
+                        **🏷️ Tag-Based Search**: Find models by specific capabilities
+                        **Popular Tags**: `text-generation`, `conversational`, `chat`, `question-answering`, `code-generation`, `small-model`, `fine-tuned`
+                        """)
+                        gr.Markdown("**⚡ Quick Tags:**")
+                        with gr.Row():
+                            tag_btn_1 = gr.Button("text-generation", size="sm", variant="secondary")
+                            tag_btn_2 = gr.Button("conversational", size="sm", variant="secondary")
+                            tag_btn_3 = gr.Button("question-answering", size="sm", variant="secondary")
+                            tag_btn_4 = gr.Button("code-generation", size="sm", variant="secondary")
+                        with gr.Row():
+                            search_tags_input = gr.Textbox(
+                                label="🏷️ Tags (comma-separated)",
+                                placeholder="e.g., text-generation, chat, small-model",
+                                value="",
+                                lines=1,
+                                scale=2
+                            )
+                            search_task_dropdown = gr.Dropdown(
+                                label="📋 Task Type",
+                                choices=[
+                                    "", "text-generation", "conversational", "question-answering", 
+                                    "summarization", "translation", "text-classification",
+                                    "token-classification", "fill-mask", "feature-extraction"
+                                ],
+                                value="",
+                                interactive=True,
+                                scale=1
+                            )
+                        with gr.Row():
+                            search_query_input = gr.Textbox(
+                                label="🔎 Keyword Search",
+                                placeholder="e.g., SmallDoge, chat, instruct",
+                                value="",
+                                lines=1,
+                                scale=2
+                            )
+                            search_limit_slider = gr.Slider(
+                                label="📊 Max Results",
+                                minimum=5,
+                                maximum=50,
+                                value=20,
+                                step=5,
+                                scale=1
+                            )
+                        with gr.Row():
+                            search_btn = gr.Button("🔍 Search Models", variant="primary", size="sm", scale=1)
+                        search_results_display = gr.HTML("")
+                        with gr.Row():
+                            search_results_dropdown = gr.Dropdown(
+                                label="📦 Select Model to Load",
+                                choices=[],
+                                value=None,
+                                interactive=True,
+                                visible=False,
+                                scale=2
+                            )
+                            load_model_btn = gr.Button(
+                                "📥 Load Selected Model", 
+                                variant="secondary", 
+                                size="sm", 
+                                visible=False,
+                                scale=1
+                            )
+                        load_result_display = gr.HTML("")
 
             # Event handlers with enhanced functionality
             def handle_refresh_models():
@@ -1146,8 +1248,11 @@ class SmallDogeWebUI:
                 print(f"❌ Error connecting clear button: {e}")
 
             try:
-                # Streaming chat completion with typing indicators and cancel support
+                # Add performance update event
                 send_btn.click(
+                    self.start_performance_updates,
+                    outputs=[token_speed, device_info, device_usage]
+                ).then(
                     show_typing_indicator,
                     outputs=[typing_indicator, cancel_btn, send_btn]
                 ).then(
@@ -1162,45 +1267,21 @@ class SmallDogeWebUI:
                     ],
                     outputs=[msg_input, chatbot]
                 ).then(
-                    hide_typing_indicator,
-                    outputs=[typing_indicator, cancel_btn, send_btn]
-                )
-                print("✅ Send button connected")
-            except Exception as e:
-                print(f"❌ Error connecting send button: {e}")
-
-            try:
-                msg_input.submit(
-                    show_typing_indicator,
-                    outputs=[typing_indicator, cancel_btn, send_btn]
-                ).then(
-                    self.chat_completion_streaming,
-                    inputs=[
-                        msg_input,
-                        chatbot,
-                        model_dropdown,
-                        temperature_slider,
-                        max_tokens_slider,
-                        top_p_slider
-                    ],
-                    outputs=[msg_input, chatbot]
+                    self.stop_performance_updates,
+                    outputs=[token_speed, device_info, device_usage]
                 ).then(
                     hide_typing_indicator,
                     outputs=[typing_indicator, cancel_btn, send_btn]
                 )
-                print("✅ Message input submit connected")
-            except Exception as e:
-                print(f"❌ Error connecting message input submit: {e}")
 
-            try:
-                # Cancel button handler
-                cancel_btn.click(
-                    handle_cancel_generation,
-                    outputs=[typing_indicator, cancel_btn, send_btn]
+                # Set automatic performance metrics updates
+                token_speed.change(
+                    self.update_performance_stats,
+                    outputs=[token_speed, device_info, device_usage]
                 )
-                print("✅ Cancel button connected")
+
             except Exception as e:
-                print(f"❌ Error connecting cancel button: {e}")
+                print(f"❌ Error setting up performance monitoring: {e}")
 
             # Model search functionality
             try:
@@ -1304,28 +1385,31 @@ class SmallDogeWebUI:
 
 
 def main():
-    """Main entry point"""
-    print("🐕 Starting SmallDoge WebUI Frontend...")
-    print("=" * 50)
-
-    # Create the WebUI instance
-    webui = SmallDogeWebUI()
-
-    # Create and launch the interface
-    interface = webui.create_interface()
-
-    print("🚀 Launching Gradio interface...")
-    print(f"📡 Backend URL: {BACKEND_URL}")
-    print(f"💾 Chat history: {CHAT_HISTORY_FILE}")
-    print("=" * 50)
-
-    # Launch the interface with simplified configuration
-    interface.launch(
-        server_name="127.0.0.1",
-        server_port=7860,
-        share=False,
-        show_error=True
-    )
+    """Main entry point for the WebUI"""
+    try:
+        # Set multiprocessing start method
+        import multiprocessing
+        if multiprocessing.get_start_method() != 'spawn':
+            multiprocessing.set_start_method('spawn', force=True)
+            
+        # Create WebUI instance
+        webui = SmallDogeWebUI()
+        interface = webui.create_interface()
+        
+        # Launch interface
+        interface.queue(max_size=10).launch(
+            server_name="127.0.0.1",  # Use local loopback address
+            server_port=7860,
+            share=False,
+            debug=True,
+            show_api=False,
+            inbrowser=True,  # Automatically open browser
+            auth=None,  # Disable authentication
+            ssl_verify=False  # Disable SSL verification
+        )
+    except Exception as e:
+        print(f"Error starting WebUI: {e}")
+        raise
 
 
 if __name__ == "__main__":
