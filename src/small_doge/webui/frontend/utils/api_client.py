@@ -492,6 +492,19 @@ class SmallDogeAPIClient:
             log.error(f"Error getting trending models: {e}")
             return {"results": [], "total": 0, "error": str(e)}
     
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """获取系统性能统计信息"""
+        try:
+            response = requests.get(f"{self.base_url}/api/v1/models/performance")
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Error getting performance stats: {e}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
+    
     def close(self):
         """Close the session"""
         self.session.close()
