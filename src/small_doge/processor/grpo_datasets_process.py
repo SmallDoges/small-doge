@@ -57,6 +57,7 @@ def validate_tokenizer(tokenizer: PreTrainedTokenizerBase) -> None:
     if tokenizer.pad_token is None and tokenizer.eos_token is not None:
         logger.warning("Tokenizer has no pad_token, using eos_token as pad_token")
         tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
 
 
 def prepare_dataset(
