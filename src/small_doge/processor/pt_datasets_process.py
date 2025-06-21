@@ -261,7 +261,6 @@ def mix_datasets_by_ratio(
                 formatting_func=formatting_func,
                 dataset_num_proc=dataset_num_proc,
             )
-            
 
             # Calculate the target size for the dataset
             if total_sample_size == -1:
