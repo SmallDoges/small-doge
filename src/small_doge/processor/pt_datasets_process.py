@@ -17,6 +17,7 @@ import json
 import logging
 import warnings
 import re
+import time
 from datasets import Dataset, IterableDataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from trl.data_utils import pack_dataset, truncate_dataset
@@ -105,11 +106,7 @@ def prepare_dataset(
 
             
     if not is_processed:
-
         # Tokenize the dataset if needed
-        if isinstance(dataset, Dataset):  # `IterableDataset.map` does not support `desc`
-            map_kwargs["desc"] = f"Tokenizing {dataset_name} dataset"
-
         def tokenize(example, processing_class, dataset_text_field):
             try:
                 processed = processing_class(text=example[dataset_text_field])
@@ -129,11 +126,53 @@ def prepare_dataset(
                     "attention_mask": [1] if processing_class.eos_token_id is not None else []
                 }
 
-        dataset = dataset.map(
-            tokenize,
-            fn_kwargs={"processing_class": processing_class, "dataset_text_field": dataset_text_field},
-            **map_kwargs,
-        )
+        # Check if dataset is Dataset (not IterableDataset) and large enough for chunking
+        if isinstance(dataset, Dataset):
+            chunk_size = 10_000 * dataset_num_proc if dataset_num_proc is not None else 1_000
+            map_kwargs["batch_size"] = chunk_size
+            total_size = len(dataset)
+            print(f"Total size of {dataset_name} dataset: {total_size}")
+            
+            if total_size <= chunk_size:
+                # If dataset is small enough, process it directly
+                map_kwargs["desc"] = f"Tokenizing {dataset_name} dataset"
+                dataset = dataset.map(
+                    tokenize,
+                    fn_kwargs={"processing_class": processing_class, "dataset_text_field": dataset_text_field},
+                    **map_kwargs,
+                )
+            else:
+                # Process in chunks and concatenate
+                logger.info(f"Processing {dataset_name} dataset in chunks of {chunk_size} (total: {total_size})")
+                processed_chunks = []
+                
+                for i in range(0, total_size, chunk_size):
+                    end_idx = min(i + chunk_size, total_size)
+                    chunk = dataset.select(range(i, end_idx))
+                    
+                    map_kwargs["desc"] = f"Tokenizing {dataset_name} dataset (chunk {i//chunk_size + 1}/{(total_size + chunk_size - 1)//chunk_size})"
+                    
+                    processed_chunk = chunk.map(
+                        tokenize,
+                        fn_kwargs={"processing_class": processing_class, "dataset_text_field": dataset_text_field},
+                        **map_kwargs,
+                    )
+                    processed_chunks.append(processed_chunk)
+                    
+                    logger.info(f"Processed chunk {i//chunk_size + 1}/{(total_size + chunk_size - 1)//chunk_size} for {dataset_name}")
+                    time.sleep(2)  # Sleep to avoid overwhelming the system with too many requests
+                
+                # Concatenate all processed chunks
+                dataset = concatenate_datasets(processed_chunks)
+                logger.info(f"Concatenated {len(processed_chunks)} chunks for {dataset_name}")
+        else:
+            # For IterableDataset, process without chunking
+            logger.info(f"Processing IterableDataset {dataset_name} without chunking")
+            dataset = dataset.map(
+                tokenize,
+                fn_kwargs={"processing_class": processing_class, "dataset_text_field": dataset_text_field},
+                **map_kwargs,
+            )
 
     # Pack or truncate
     if packing:
