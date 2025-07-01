@@ -29,19 +29,11 @@ else:
     _file = globals()["__file__"]
     sys.modules[__name__] = _LazyModule(__name__, _file, define_import_structure(_file), module_spec=__spec__)
 
-from .trainer.doge import (
-    doge_pt_trainer,
-    doge_sft_trainer,
-    doge_dpo_trainer,
-    doge_grpo_trainer,
-    doge_tokenizer_trainer,
-)
-from .trainer.doge2 import (
-    doge2_pt_trainer,
-    doge2_sft_trainer,
-    doge2_dpo_trainer,
-    doge2_grpo_trainer,
-    doge2_tokenizer_trainer,
+from .trainer import (
+    pt_trainer,
+    sft_trainer,
+    dpo_trainer,
+    unified_trainer,
 )
 
 # WebUI components (optional - only if webui dependencies are installed)
@@ -63,16 +55,10 @@ __all__ = [
     "Doge2ForSequenceClassification",
     "Doge2Model",
     "Doge2PreTrainedModel",
-    "doge_pt_trainer",
-    "doge_sft_trainer",
-    "doge_dpo_trainer",
-    "doge_grpo_trainer",
-    "doge_tokenizer_trainer",
-    "doge2_pt_trainer",
-    "doge2_sft_trainer",
-    "doge2_dpo_trainer",
-    "doge2_grpo_trainer",
-    "doge2_tokenizer_trainer",
+    "pt_trainer",
+    "sft_trainer",
+    "dpo_trainer",
+    "unified_trainer",
 ]
 
 # Add WebUI exports if available
