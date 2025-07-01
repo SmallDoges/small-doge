@@ -1,4 +1,4 @@
-# Copyright 2025 The SamllDoge Team. All rights reserved.
+# Copyright 2025 The SmallDoge Team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,71 +13,42 @@
 # limitations under the License.
 
 import logging
-import re
 import os
 import sys
 from argparse import ArgumentParser
 
+import yaml
 import datasets
 import torch
 import transformers
-from datasets import load_from_disk
 from transformers import (
-    AutoConfig,
-    AutoModel,
     AutoModelForCausalLM,
     AutoTokenizer,
     DataCollatorForLanguageModeling,
     Trainer,
-    TrainingArguments,
-    TrainerControl,
-    TrainerState,
-    TrainerCallback,
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
-
-import yaml
-from small_doge.models.doge.modeling_doge import DogeConfig, DogeForCausalLM, DogeModel
+from small_doge.utils import (
+    get_modeling_classes, 
+    register_model_classes,
+    DogeWarmupCallback,
+    Doge2WarmupCallback,
+    PTConfig,
+)
+from small_doge.processor import mix_pt_datasets
 from trl import ModelConfig, ScriptArguments, TrlParser
 
 
 logger = logging.getLogger(__name__)
 
 
-def set_moe_warmup_phase(model: DogeForCausalLM):
-    MoE_params = [
-        r"^model\.layers\.\d+\.feed_forward\.router_gate\.weight$",
-        r"^model\.layers\.\d+\.feed_forward\.down_embed\.weight$",
-        r"^model\.layers\.\d+\.feed_forward\.up_embed\.weight$",
-    ]
-
-    # Freeze all parameters first
-    unfreeze_params = []
-    for name, param in model.named_parameters():
-        param.requires_grad = False
-
-    # Then unfreeze the target MoE parameters
-    for name, param in model.named_parameters():
-        if any(re.match(pattern, name) for pattern in MoE_params):
-            param.requires_grad = True
-            unfreeze_params.append(name)
-
-    logger.info(f"MoE warm-up phase: unfreeze {unfreeze_params}, freeze other parameters")
-    return model
-
-class MoEWarmupCallback(TrainerCallback):
-    def __init__(self, warmup_steps: int):
-        self.warmup_steps = warmup_steps
-        logger.info(f"MoE warm-up phase, only train specific parameters, until step {warmup_steps}")
-
-    def on_step_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
-        if state.global_step == self.warmup_steps:
-            control.should_training_stop = True
-            logger.info("MoE warm-up phase finished, please set warmup_steps to 0 in config, and restart training")
-
-
-def main(script_args, training_args, model_args, model_config):
+def main(
+    script_args: ScriptArguments,
+    training_args: PTConfig,
+    model_args: ModelConfig,
+    model_config: dict,
+):
     # Set seed for reproducibility
     set_seed(training_args.seed)
 
@@ -105,23 +76,44 @@ def main(script_args, training_args, model_args, model_config):
     logger.info(f"Script parameters {script_args}")
     logger.info(f"Data parameters {training_args}")
 
-    # Check for last checkpoint
-    last_checkpoint = None
-    if os.path.isdir(training_args.output_dir):
-        last_checkpoint = get_last_checkpoint(training_args.output_dir)
-    if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
-        logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
+    ######################
+    # Determine model type
+    ######################
+    recipe_type = training_args.recipe_type.lower()
+    is_doge2 = recipe_type == 'doge2'
+    logger.info(f"Using {'Doge2' if is_doge2 else 'Doge'} model")
 
-    ###############
-    # Load datasets
-    ###############
-    dataset = load_from_disk(script_args.dataset_name)
+    # Get model classes
+    config_class, model_class, causal_lm_class = get_modeling_classes(recipe_type)
 
     ################
     # Load tokenizer
     ################
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code, use_fast=True
+        model_args.model_name_or_path,
+        revision=model_args.model_revision,
+        trust_remote_code=model_args.trust_remote_code,
+        use_fast=True
+    )
+    tokenizer.padding_side = "right"
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    ###############
+    # Load datasets
+    ###############
+    logger.info("Using processor for dataset mixing and processing")
+    dataset = mix_pt_datasets(
+        datasets_and_ratios=training_args.datasets_and_ratios,
+        total_sample_size=training_args.total_sample_size,
+        dataset_text_field=training_args.dataset_text_field,
+        processing_class=tokenizer,
+        max_length=training_args.max_length,
+        packing=training_args.packing,
+        formatting_func=None,
+        dataset_num_proc=training_args.dataset_num_proc,
+        seed=training_args.seed,
+        cache_dir=training_args.cache_dir,
     )
 
     ###################
@@ -140,22 +132,45 @@ def main(script_args, training_args, model_args, model_config):
     )
     training_args.model_init_kwargs = model_kwargs
 
-    ################################
+    ##################
     # Initialize model
-    ################################
+    ##################
     logger.info("Initializing model")
-    config = DogeConfig(**model_config)
-    model = DogeForCausalLM.from_pretrained(
+    config = config_class(**model_config)
+    model = causal_lm_class.from_pretrained(
         model_args.model_name_or_path,
         config=config,
-    ) if model_args.model_name_or_path is not None and model_args.model_name_or_path.endswith("checkpoint") else DogeForCausalLM(config=config)
+    ) if model_args.model_name_or_path is not None and model_args.model_name_or_path.endswith("checkpoint") else causal_lm_class(config=config)
 
     model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
     logger.info(f"Model parameters: {model_num_params}")
 
-    if config.is_moe and training_args.warmup_steps > 0:
-        model = set_moe_warmup_phase(model)
+    # Check for last checkpoint
+    last_checkpoint = None
+    if os.path.isdir(training_args.output_dir):
+        last_checkpoint = get_last_checkpoint(training_args.output_dir)
+    if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
+        logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
+    else:
+        logger.info("No checkpoint found, starting training from scratch.")
+
+    ######################
+    # Set warmup callbacks
+    ######################
+    # Handle warmup phases based on model type
+    callbacks = []
+    if is_doge2:
+        # Doge2 multi warmup handling
+        warmup_steps = getattr(training_args, 'warmup_steps', 0)
+        warmup_phase_steps = model_config.get('warmup_phase_steps', None)  # Custom phase steps if specified
+        if warmup_steps > 0:
+            # Use the new multiphase warmup callback that handles all phases automatically
+            callbacks.append(Doge2WarmupCallback(warmup_steps, warmup_phase_steps))
+    else:
+        # Doge MoE warmup handling
+        if hasattr(config, 'is_moe') and config.is_moe and training_args.warmup_steps > 0:
+            callbacks.append(DogeWarmupCallback(training_args.warmup_steps))
 
     ################################
     # Initialize the PT trainer
@@ -171,7 +186,7 @@ def main(script_args, training_args, model_args, model_config):
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         processing_class=tokenizer,
         data_collator=data_collator,
-        callbacks=[MoEWarmupCallback(training_args.warmup_steps)] if config.is_moe and training_args.warmup_steps > 0 else None,
+        callbacks=callbacks if len(callbacks) > 0 else None,
     )
 
     ###############
@@ -220,15 +235,13 @@ def main(script_args, training_args, model_args, model_config):
         trainer.save_metrics("eval", metrics)
         logger.info("*** Evaluation complete ***")
 
-    ################################
+    #############################
     # Register the model and save
-    ################################
-    AutoConfig.register("doge", DogeConfig)
-    AutoModel.register(DogeConfig, DogeModel)
-    AutoModelForCausalLM.register(DogeConfig, DogeForCausalLM)
-    DogeConfig.register_for_auto_class()
-    DogeModel.register_for_auto_class("AutoModel")
-    DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
+    #############################
+    register_model_classes(recipe_type)
+    config_class.register_for_auto_class()
+    model_class.register_for_auto_class("AutoModel")
+    causal_lm_class.register_for_auto_class("AutoModelForCausalLM")
     tokenizer = AutoTokenizer.from_pretrained(f"{training_args.output_dir}")
     tokenizer.save_pretrained(f"{training_args.output_dir}")
     model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")
@@ -247,9 +260,12 @@ if __name__ == "__main__":
         "--config", type=str, default="./recipes/doge/Doge-20M/config_full.yaml", help="path to yaml config file of PT"
     )
 
-    parser = TrlParser((ScriptArguments, TrainingArguments, ModelConfig))
+    parser = TrlParser((ScriptArguments, PTConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
+    
+    config_path = model_config_parser.parse_args().config
     model_config = yaml.load(
-        open(model_config_parser.parse_args().config, "r", encoding="utf-8"), Loader=yaml.FullLoader
+        open(config_path, "r", encoding="utf-8"), Loader=yaml.FullLoader
     )["model_config"]
+    
     main(script_args, training_args, model_args, model_config)

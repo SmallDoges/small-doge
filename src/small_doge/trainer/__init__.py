@@ -12,16 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .pt import main as doge2_pt_trainer
-from .sft import main as doge2_sft_trainer
-from .dpo import main as doge2_dpo_trainer
-from .grpo import main as doge2_grpo_trainer
-from .tokenizer import main as doge2_tokenizer_trainer
+
+from .pt import main as pt_trainer
+from .sft import main as sft_trainer
+from .dpo import main as dpo_trainer
+from .grpo import main as grpo_trainer
+from .train import main as unified_trainer
 
 __all__ = [
-    "doge2_pt_trainer",
-    "doge2_sft_trainer",
-    "doge2_dpo_trainer",
-    "doge2_grpo_trainer",
-    "doge2_tokenizer_trainer",
+    "pt_trainer",
+    "sft_trainer", 
+    "dpo_trainer",
+    "grpo_trainer",
+    "unified_trainer",
 ]

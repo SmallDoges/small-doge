@@ -14,20 +14,20 @@
 
 import logging
 import os
-import re
 import sys
-from typing import Optional
-from dataclasses import dataclass, field
 
 import datasets
 import torch
 import transformers
-from datasets import load_dataset, load_from_disk
-from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-from small_doge.models.doge2.modeling_doge2 import Doge2Config, Doge2ForCausalLM, Doge2Model
-import trl
+from small_doge.utils import (
+    get_modeling_classes,
+    register_model_classes,
+    SFTConfig,
+)
+from small_doge.processor import mix_sft_datasets
 from trl import (
     ModelConfig,
     ScriptArguments,
@@ -40,19 +40,6 @@ from trl import (
 
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SFTConfig(trl.SFTConfig):
-    """
-    args for small-doge SFT
-    """
-
-    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
-    system_prompt: Optional[str] = field(
-        default=None,
-        metadata={"help": "The optional system prompt to use."},
-    )
 
 
 def main(
@@ -87,28 +74,15 @@ def main(
     logger.info(f"Script parameters {script_args}")
     logger.info(f"Data parameters {training_args}")
 
-    # Check for last checkpoint
-    last_checkpoint = None
-    if os.path.isdir(training_args.output_dir):
-        last_checkpoint = get_last_checkpoint(training_args.output_dir)
-    if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
-        logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
+    ######################
+    # Determine model type
+    ######################
+    recipe_type = training_args.recipe_type.lower()
+    is_doge2 = recipe_type == 'doge2'
+    logger.info(f"Using {'Doge2' if is_doge2 else 'Doge'} model")
 
-    ###############
-    # Load datasets
-    ###############
-    if re.match(r'^[^/]+/[^/]+$', script_args.dataset_name):
-        dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
-    else:
-        dataset = load_from_disk(script_args.dataset_name)
-
-    def preprocess_function(examples):
-        messages: list = examples["messages"]
-        if training_args.system_prompt is not None:
-            messages.insert(0, {"role": "system", "content": training_args.system_prompt})
-        return {"messages": messages}
-    
-    dataset = dataset.map(preprocess_function)
+    # Get model classes
+    config_class, model_class, causal_lm_class = get_modeling_classes(recipe_type)
 
     ################
     # Load tokenizer
@@ -116,12 +90,30 @@ def main(
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.model_name_or_path,
         revision=model_args.model_revision,
-        use_fast=True,
         trust_remote_code=model_args.trust_remote_code,
+        use_fast=True
     )
     tokenizer.padding_side = "right"
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    ###############
+    # Load datasets
+    ###############
+    logger.info("Using processor for dataset mixing and processing")
+    dataset = mix_sft_datasets(
+        datasets_and_ratios=training_args.datasets_and_ratios,
+        total_sample_size=training_args.total_sample_size,
+        dataset_text_field=training_args.dataset_text_field,
+        processing_class=tokenizer,
+        max_length=training_args.max_length,
+        packing=training_args.packing,
+        formatting_func=None,
+        dataset_num_proc=training_args.dataset_num_proc,
+        seed=training_args.seed,
+        cache_dir=training_args.cache_dir,
+        tools=training_args.tools,
+    )
 
     ###################
     # Model init kwargs
@@ -141,6 +133,15 @@ def main(
         quantization_config=quantization_config,
     )
     training_args.model_init_kwargs = model_kwargs
+
+    # Check for last checkpoint
+    last_checkpoint = None
+    if os.path.isdir(training_args.output_dir):
+        last_checkpoint = get_last_checkpoint(training_args.output_dir)
+    if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
+        logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
+    else:
+        logger.info("No checkpoint found, starting training from scratch.")
 
     ############################
     # Initialize the SFT Trainer
@@ -200,15 +201,14 @@ def main(
         trainer.save_metrics("eval", metrics)
         logger.info("*** Evaluation complete ***")
 
-    ################################
+    #############################
     # Register the model and save
-    ################################
-    AutoConfig.register("doge2", Doge2Config)
-    AutoModel.register(Doge2Config, Doge2Model)
-    AutoModelForCausalLM.register(Doge2Config, Doge2ForCausalLM)
-    Doge2Config.register_for_auto_class()
-    Doge2Model.register_for_auto_class("AutoModel")
-    Doge2ForCausalLM.register_for_auto_class("AutoModelForCausalLM")
+    #############################
+    register_model_classes(recipe_type)
+    config_class.register_for_auto_class()
+    model_class.register_for_auto_class("AutoModel")
+    causal_lm_class.register_for_auto_class("AutoModelForCausalLM")
+    
     tokenizer = AutoTokenizer.from_pretrained(f"{training_args.output_dir}")
     tokenizer.save_pretrained(f"{training_args.output_dir}")
     model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")

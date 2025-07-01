@@ -14,20 +14,20 @@
 
 import logging
 import os
-import re
 import sys
-from typing import Optional
-from dataclasses import dataclass, field
 
 import datasets
 import torch
 import transformers
-from datasets import load_dataset, load_from_disk
-from transformers import AutoConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, set_seed
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-from small_doge.models.doge.modeling_doge import DogeConfig, DogeForCausalLM, DogeModel
-import trl
+from small_doge.utils import (
+    get_modeling_classes,
+    register_model_classes,
+    DPOConfig,
+)
+from small_doge.processor import mix_dpo_datasets
 from trl import (
     ModelConfig,
     ScriptArguments,
@@ -40,19 +40,6 @@ from trl import (
 
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class DPOConfig(trl.DPOConfig):
-    """
-    args for small-doge DPO
-    """
-
-    chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
-    system_prompt: Optional[str] = field(
-        default=None,
-        metadata={"help": "The optional system prompt to use."},
-    )
 
 
 def main(
@@ -86,40 +73,47 @@ def main(
     logger.info(f"Model parameters {model_args}")
     logger.info(f"Script parameters {script_args}")
     logger.info(f"Data parameters {training_args}")
+    logger.info(f"Recipe type: {training_args.recipe_type}")
 
-    # Check for last checkpoint
-    last_checkpoint = None
-    if os.path.isdir(training_args.output_dir):
-        last_checkpoint = get_last_checkpoint(training_args.output_dir)
-    if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
-        logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
-
-    ################
-    # Load datasets
-    ################
-    if re.match(r'^[^/]+/[^/]+$', script_args.dataset_name):
-        dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
-    else:
-        dataset = load_from_disk(script_args.dataset_name)
-
-    def preprocess_function(examples):
-        prompt = ""
-        if training_args.system_prompt is not None:
-            prompt = prompt + training_args.system_prompt + "\n"
-        prompt = prompt + examples["prompt"]
-        return {"prompt": prompt}
-
-    dataset = dataset.map(preprocess_function)
+    ######################
+    # Determine model type
+    ######################
+    recipe_type = training_args.recipe_type.lower()
+    is_doge2 = recipe_type == 'doge2'
+    logger.info(f"Using {'Doge2' if is_doge2 else 'Doge'} model")
+    
+    # Get model classes
+    config_class, model_class, causal_lm_class = get_modeling_classes(recipe_type)
 
     ################
     # Load tokenizer
     ################
     tokenizer = AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path, trust_remote_code=model_args.trust_remote_code, use_fast=True
+        model_args.model_name_or_path,
+        revision=model_args.model_revision,
+        trust_remote_code=model_args.trust_remote_code,
+        use_fast=True
     )
     tokenizer.padding_side = "left"
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    ###############
+    # Load datasets
+    ###############
+    logger.info("Using processor for dataset mixing and processing")
+    dataset = mix_dpo_datasets(
+        datasets_and_ratios=training_args.datasets_and_ratios,
+        total_sample_size=training_args.total_sample_size,
+        processing_class=tokenizer,
+        max_prompt_length=training_args.max_prompt_length,
+        max_completion_length=training_args.max_completion_length,
+        formatting_func=None,
+        dataset_num_proc=training_args.dataset_num_proc,
+        seed=training_args.seed,
+        cache_dir=training_args.cache_dir,
+        tools=training_args.tools,
+    )
 
     ###################
     # Model init kwargs
@@ -140,18 +134,20 @@ def main(
     )
     training_args.model_init_kwargs = model_kwargs
 
-    model = model_args.model_name_or_path
-    ref_model = model
-
-    if model_args.use_peft is True:
-        ref_model = None
+    # Check for last checkpoint
+    last_checkpoint = None
+    if os.path.isdir(training_args.output_dir):
+        last_checkpoint = get_last_checkpoint(training_args.output_dir)
+    if last_checkpoint is not None and training_args.resume_from_checkpoint is None:
+        logger.info(f"Checkpoint detected, resuming training at {last_checkpoint=}.")
+    else:
+        logger.info("No checkpoint found, starting training from scratch.")
 
     ############################
     # Initialize the DPO Trainer
     ############################
     trainer = DPOTrainer(
-        model=model,
-        ref_model=ref_model,
+        model=model_args.model_name_or_path,
         args=training_args,
         train_dataset=dataset[script_args.dataset_train_split],
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
@@ -208,17 +204,19 @@ def main(
     ################################
     # Register the model and save
     ################################
-    AutoConfig.register("doge", DogeConfig)
-    AutoModel.register(DogeConfig, DogeModel)
-    AutoModelForCausalLM.register(DogeConfig, DogeForCausalLM)
-    DogeConfig.register_for_auto_class()
-    DogeModel.register_for_auto_class("AutoModel")
-    DogeForCausalLM.register_for_auto_class("AutoModelForCausalLM")
+    register_model_classes(recipe_type)
+    config_class.register_for_auto_class()
+    model_class.register_for_auto_class("AutoModel")
+    causal_lm_class.register_for_auto_class("AutoModelForCausalLM")
+    
     tokenizer = AutoTokenizer.from_pretrained(f"{training_args.output_dir}")
     tokenizer.save_pretrained(f"{training_args.output_dir}")
     model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")
     model.save_pretrained(f"{training_args.output_dir}")
 
+    #############
+    # push to hub
+    #############
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
         trainer.push_to_hub(**kwargs)
