@@ -20,7 +20,7 @@ We provide Doge checkpoints that can be further pre-trained on new datasets. See
 
 ### 1. Prepare Dataset (One-Stop Solution)
 
-Use the advanced dataset processor that handles download, processing, and mixing in one function:
+SmallDoge uses an **integrated processor-based approach** for all training stages. The processor automatically handles dataset downloading, mixing, tokenization, and formatting in one unified pipeline.
 
 ```python
 from transformers import AutoTokenizer
@@ -37,7 +37,7 @@ datasets_and_ratios = [
 # Load Doge tokenizer (vocab_size=32768)
 tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
 
-# One function to download, process, and mix datasets
+# Unified processor handles everything: download, tokenize, mix, and pack
 mixed_dataset = mix_datasets_by_ratio(
     datasets_and_ratios=datasets_and_ratios,
     total_sample_size=128000000,  # 128M samples for training
@@ -55,12 +55,12 @@ mixed_dataset = mix_datasets_by_ratio(
 mixed_dataset.save_to_disk("./datasets/pt_dataset")
 ```
 
-**Benefits:**
-- ✅ **All-in-one**: Download, tokenize, and mix datasets in one call
-- ✅ **Flexible ratios**: Easy to adjust dataset mixing proportions
-- ✅ **Memory efficient**: Processes datasets in streaming mode
-- ✅ **Reproducible**: Fixed seed for consistent results
-- ✅ **Scalable**: Parallel processing with configurable workers
+**Architecture Benefits:**
+- ✅ **Unified Pipeline**: All training stages use the same processor-based approach
+- ✅ **Automatic Processing**: No manual preprocessing steps required
+- ✅ **Consistent Interface**: Same API across PT, SFT, and DPO training
+- ✅ **Memory Efficient**: Streaming processing with configurable caching
+- ✅ **Reproducible**: Fixed seed ensures consistent dataset mixing
 
 ### 2. Model Configuration
 
@@ -89,7 +89,7 @@ ACCELERATE_LOG_LEVEL=info accelerate launch \
     ./src/small_doge/trainer/doge/pt.py \
     --config recipes/doge/Doge-20M/config_full.yaml
 ```
-
+accelerate launch  --config_file recipes/accelerate_configs/single_gpu.yaml ./src/small_doge/trainer/pt.py --config recipes/doge/Doge-20M/config_full.yaml
 **Multi-GPU Options:**
 - `single_gpu.yaml` - Single GPU training
 - `ddp.yaml` - Distributed Data Parallel
@@ -125,19 +125,20 @@ datasets_and_ratios = [
 # Load Doge tokenizer
 tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
 
-# Process SFT datasets with conversation formatting
+# Unified processor with integrated formatting
 sft_dataset = mix_datasets_by_ratio(
     datasets_and_ratios=datasets_and_ratios,
     total_sample_size=500000,   # 500K conversation samples
     dataset_text_field="text",
     processing_class=tokenizer,
     max_length=2048,
-    apply_chat_template=True,   # Apply chat formatting
     packing=False,              # Keep conversations intact
-    formatting_func=None,       # Custom identity formatting if needed
+    formatting_func=None,       # Custom formatting if needed
     dataset_num_proc=8,
     seed=42,
     cache_dir="./cache",
+    chat_template=None,         # Use default chat template
+    tools=None,                 # Add tools if needed
 )
 
 # Save processed SFT dataset
@@ -146,20 +147,20 @@ sft_dataset.save_to_disk("./datasets/sft_dataset")
 
 **Custom Identity Example:**
 ```python
-def custom_identity_formatting(example):
+def custom_identity_formatting(examples):
     """Add custom model identity to conversations"""
-    conversation = [
-        {"role": "user", "content": "Who are you?"},
-        {"role": "assistant", "content": "I am an AI assistant named Doge, trained by the SmallDoge community based on the Doge architecture."},
-        {"role": "user", "content": example["prompt"]},
-        {"role": "assistant", "content": example["response"]},
-    ]
-    return {"conversation": conversation}
+    system_prompt = "I am Doge, an AI assistant trained by the SmallDoge community using the Doge architecture. I'm designed to be helpful, harmless, and honest."
+    
+    messages = examples.get("messages", [])
+    if messages and messages[0].get("role") != "system":
+        messages.insert(0, {"role": "system", "content": system_prompt})
+    
+    return {"messages": messages}
 
-# Use with custom formatting
+# Use with custom formatting - processor handles everything automatically
 sft_dataset = mix_datasets_by_ratio(
     datasets_and_ratios=datasets_and_ratios,
-    formatting_func=custom_identity_formatting,
+    formatting_func=custom_identity_formatting,  # Integrated processing
     # ...other parameters
 )
 ```
@@ -209,9 +210,12 @@ dpo_dataset = mix_datasets_by_ratio(
     processing_class=tokenizer,
     max_prompt_length=512,
     max_completion_length=512,
+    formatting_func=None,
     dataset_num_proc=8,
     seed=42,
     cache_dir="./cache",
+    chat_template=None,         # Use default template
+    tools=None,                 # Add tools if needed
 )
 
 # Save processed DPO dataset
