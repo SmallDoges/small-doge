@@ -261,7 +261,7 @@ if __name__ == "__main__":
     )
 
     parser = TrlParser((ScriptArguments, PTConfig, ModelConfig))
-    script_args, training_args, model_args = parser.parse_args_and_config()
+    script_args, training_args, model_args = parser.parse_args_and_config(fail_with_unknown_args=False)
     
     config_path = model_config_parser.parse_args().config
     model_config = yaml.load(
