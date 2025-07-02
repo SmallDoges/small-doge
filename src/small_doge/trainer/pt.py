@@ -140,7 +140,7 @@ def main(
     model = causal_lm_class.from_pretrained(
         model_args.model_name_or_path,
         config=config,
-    ) if model_args.model_name_or_path is not None and model_args.model_name_or_path.endswith("checkpoint") else causal_lm_class(config=config)
+    ).to(getattr(torch, torch_dtype)) if model_args.model_name_or_path is not None and model_args.model_name_or_path.endswith("checkpoint") else causal_lm_class(config=config)
 
     model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
