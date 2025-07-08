@@ -63,7 +63,7 @@ _deps = [
     "sentencepiece>=0.1.99",
     "tensorboard>=2.6.0",
     "torch>=2.5.1",
-    "transformers>=4.30.0",  # Updated version requirement
+    "transformers @ git+https://github.com/huggingface/transformers.git",  # Install from latest git repository
     "trl",
     "vllm>=0.7.1",
     "wandb>=0.19.1",
