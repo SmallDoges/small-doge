@@ -71,10 +71,6 @@ class SFTConfig(trl.SFTConfig):
     """
     Configuration for Small-Doge Supervised Fine-Tuning (SFT).
     """
-    recipe_type: Optional[str] = field(
-        default="doge",
-        metadata={"help": "The type of recipe to use, e.g., 'doge' or 'doge2'."},
-    )
     
     # Dataset mixing parameters
     datasets_and_ratios: Optional[List[Dict[str, float]]] = field(
