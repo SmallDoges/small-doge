@@ -195,7 +195,7 @@ def mix_datasets_by_ratio(
     Args:
         datasets_and_ratios: List of dictionaries, each containing a dataset and its ratio.
             Each dictionary contains one key-value pair where key is the dataset name and value is the mixing ratio.
-        total_sample_size: Total sample size for the mixed training dataset.
+        total_sample_size: Total sample size for the mixed training dataset. Set to -1 to keep all samples.
         dataset_text_field: Name of the field in the dataset that contains the text.
         processing_class: Tokenizer class used for processing the text.
         max_length: Maximum length of processed sequences. Set to None for no limit.
@@ -221,10 +221,25 @@ def mix_datasets_by_ratio(
         # Create tokenizer
         tokenizer = AutoTokenizer.from_pretrained("SmallDoge/Doge-tokenizer")
     
-        # Mix datasets
+        # Mix datasets with specific sample size
         mixed_dataset = mix_datasets_by_ratio(
             datasets_and_ratios=datasets_and_ratios,
             total_sample_size=10000,
+            dataset_text_field="text",
+            processing_class=tokenizer,
+            max_length=2048,
+            packing=True,
+            formatting_func=None,
+            dataset_num_proc=4,
+            seed=42,
+            cache_dir="./cache",
+            tools=None,
+        )
+        
+        # Mix datasets keeping all samples (total_sample_size=-1)
+        mixed_dataset_all = mix_datasets_by_ratio(
+            datasets_and_ratios=datasets_and_ratios,
+            total_sample_size=-1,  # Keep all samples
             dataset_text_field="text",
             processing_class=tokenizer,
             max_length=2048,
@@ -289,14 +304,19 @@ def mix_datasets_by_ratio(
             # Calculate the target size for the dataset
             if total_sample_size == -1:
                 target_size = len(split_dataset)
+                logger.info(f"total_sample_size=-1, keeping all samples for {dataset_name}: {split_name}")
             else:
                 target_size = int(total_sample_size * ratio) if split_name == "train" else len(split_dataset)
+            
             current_size = len(split_dataset)
             logger.info(f"Processed dataset size for {dataset_name}: {split_name}: {current_size}")
             logger.info(f"Target size for {dataset_name}: {split_name}: {target_size}")
 
-            # If the dataset is smaller than the target size, repeat it
-            if current_size < target_size:
+            # If total_sample_size is -1, keep all samples without any modification
+            if total_sample_size == -1:
+                logger.info(f"Keeping all {current_size} samples for {dataset_name}: {split_name}")
+            elif current_size < target_size:
+                # If the dataset is smaller than the target size, repeat it
                 logger.warning(
                     f"Dataset {dataset_name}: {split_name} is smaller than the target size. "
                     f"Repeating the dataset to reach the target size."
@@ -311,7 +331,8 @@ def mix_datasets_by_ratio(
                     indices.extend(range(remainder))
                 
                 split_dataset = split_dataset.select(indices)
-            else:
+            elif current_size > target_size:
+                # If the dataset is larger than the target size, truncate it
                 logger.warning(
                     f"Dataset {dataset_name}: {split_name} is larger than the target size. "
                     f"Truncating the dataset to reach the target size."
