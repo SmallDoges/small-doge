@@ -19,14 +19,10 @@ import sys
 import datasets
 import torch
 import transformers
-from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
+from transformers import AutoTokenizer, set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-from small_doge.utils import (
-    get_modeling_classes,
-    register_model_classes,
-    SFTConfig,
-)
+from small_doge.utils import SFTConfig
 from small_doge.processor import mix_sft_datasets
 from trl import (
     ModelConfig,
@@ -73,16 +69,6 @@ def main(
     logger.info(f"Model parameters {model_args}")
     logger.info(f"Script parameters {script_args}")
     logger.info(f"Data parameters {training_args}")
-
-    ######################
-    # Determine model type
-    ######################
-    recipe_type = training_args.recipe_type.lower()
-    is_doge2 = recipe_type == 'doge2'
-    logger.info(f"Using {'Doge2' if is_doge2 else 'Doge'} model")
-
-    # Get model classes
-    config_class, model_class, causal_lm_class = get_modeling_classes(recipe_type)
 
     ################
     # Load tokenizer
@@ -200,19 +186,6 @@ def main(
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
         logger.info("*** Evaluation complete ***")
-
-    #############################
-    # Register the model and save
-    #############################
-    register_model_classes(recipe_type)
-    config_class.register_for_auto_class()
-    model_class.register_for_auto_class("AutoModel")
-    causal_lm_class.register_for_auto_class("AutoModelForCausalLM")
-    
-    tokenizer = AutoTokenizer.from_pretrained(f"{training_args.output_dir}")
-    tokenizer.save_pretrained(f"{training_args.output_dir}")
-    model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")
-    model.save_pretrained(f"{training_args.output_dir}")
 
     #############
     # push to hub
