@@ -111,7 +111,7 @@ def main(
     logger.info("*** Initializing model kwargs ***")
     config_kwargs = dict(
         use_cache=False if training_args.gradient_checkpointing else True,
-        **training_args.model_init_kwargs,
+        **(training_args.model_init_kwargs or {}),
     )
     model_kwargs = dict(
         revision=model_args.model_revision,
