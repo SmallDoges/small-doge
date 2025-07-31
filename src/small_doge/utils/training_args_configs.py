@@ -28,14 +28,19 @@ from trl import ScriptArguments
 @dataclass
 class PTConfig(TrainingArguments):
     """
-    Configuration for Small-Doge Pre-Training (PT).
+    Configuration for Small-Doge Pre-Training.
     """
     recipe_type: str = field(
         default="doge",
-        metadata={"help": "The type of recipe to use, e.g., 'doge' or 'doge2'."},
+        metadata={"help": "The type of recipe to use, e.g., 'doge'."},
     )
-    
-    # Dataset mixing parameters
+
+    model_init_kwargs: Optional[Dict[str, Any]] = field(
+        default=None,
+        metadata={"help": "Additional keyword arguments for model initialization."}
+    )
+
+    # Dataset parameters
     datasets_and_ratios: Optional[List[Dict[str, float]]] = field(
         default=None,
         metadata={"help": "List of datasets and their mixing ratios. Format: [{'dataset_name': ratio}, ...]"}
@@ -69,7 +74,7 @@ class PTConfig(TrainingArguments):
 @dataclass
 class SFTConfig(trl.SFTConfig):
     """
-    Configuration for Small-Doge Supervised Fine-Tuning (SFT).
+    Configuration for Small-Doge Supervised Fine-Tuning.
     """
     
     # Dataset mixing parameters
@@ -110,7 +115,7 @@ class SFTConfig(trl.SFTConfig):
 @dataclass
 class DPOConfig(trl.DPOConfig):
     """
-    Configuration for Small-Doge Direct Preference Optimization (DPO).
+    Configuration for Small-Doge Direct Preference Optimization.
     """
     chat_template: Optional[str] = field(
         default=None, 
@@ -147,7 +152,7 @@ class DPOConfig(trl.DPOConfig):
 @dataclass
 class GRPOConfig(trl.GRPOConfig):
     """
-    Configuration for Small-Doge Group Relative Preference Optimization (GRPO).
+    Configuration for Small-Doge Group Relative Preference Optimization.
     """
     chat_template: Optional[str] = field(default=None, metadata={"help": "The chat template to use."})
     system_prompt: Optional[str] = field(
