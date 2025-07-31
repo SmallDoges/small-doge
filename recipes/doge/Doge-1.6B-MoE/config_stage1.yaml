@@ -43,7 +43,7 @@ model_name_or_path: SmallDoge/Doge-1.6B-checkpoint
 model_revision: main
 trust_remote_code: true
 
-# Data training arguments
+# Dataset arguments
 datasets_and_ratios:
   - "<dataset_name_or_path>": 1.0
 total_sample_size: 8000000
