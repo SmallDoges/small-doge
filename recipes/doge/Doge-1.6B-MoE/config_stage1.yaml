@@ -16,14 +16,13 @@ hub_model_id: Doge-1.6B-MoE-Stage1
 hub_strategy: every_save
 
 # Model arguments
-model_config:
+model_init_kwargs:
   vocab_size: 128256
   hidden_size: 1024
   intermediate_size: 4096
   num_hidden_layers: 32
   hidden_dropout: 0.0
   hidden_act: "silu"
-  use_cache: True
   tie_word_embeddings: True
   keep_window_size: 4096
   max_position_embeddings: 4096
@@ -37,14 +36,14 @@ model_config:
   bos_token_id: 128000
   eos_token_id: 128001
   pad_token_id: 128001
+  attn_implementation: sdpa
+  torch_dtype: bfloat16
 
 model_name_or_path: SmallDoge/Doge-1.6B-checkpoint
 model_revision: main
 trust_remote_code: true
-attn_implementation: sdpa
-torch_dtype: bfloat16
 
-# Data training arguments
+# Dataset arguments
 datasets_and_ratios:
   - "<dataset_name_or_path>": 1.0
 total_sample_size: 8000000

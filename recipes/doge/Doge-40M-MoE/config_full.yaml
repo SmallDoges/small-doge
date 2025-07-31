@@ -1,12 +1,12 @@
 # Logging and Output arguments
 log_level: info
 logging_strategy: steps
-logging_steps: 100
+logging_steps: 1
 report_to:
 - wandb
 - tensorboard
 save_strategy: steps
-save_steps: 100
+save_steps: 1000
 output_dir: data/Doge-40M-MoE
 overwrite_output_dir: true
 push_to_hub: true
@@ -16,14 +16,13 @@ hub_model_id: Doge-40M-MoE
 hub_strategy: every_save
 
 # Model arguments
-model_config:
+model_init_kwargs:
   vocab_size: 128256
   hidden_size: 256
   intermediate_size: 768
   num_hidden_layers: 8
   hidden_dropout: 0.0
   hidden_act: "silu"
-  use_cache: True
   tie_word_embeddings: True
   keep_window_size: 2048
   max_position_embeddings: 2048
@@ -33,16 +32,18 @@ model_config:
   is_moe: True
   num_experts: 1024
   num_experts_per_tok: 8
-  output_router_logits: True
-  _attn_implementation_internal: sdpa
+  output_router_logits: False
   bos_token_id: 128000
   eos_token_id: 128001
   pad_token_id: 128001
+  attn_implementation: sdpa
+  torch_dtype: bfloat16
 
 model_name_or_path: SmallDoge/Doge-tokenizer
-torch_dtype: bfloat16
+model_revision: main
+trust_remote_code: true
 
-# Data training arguments
+# Dataset arguments
 datasets_and_ratios:
   - "<dataset_name_or_path>": 1.0
 total_sample_size: 4096000

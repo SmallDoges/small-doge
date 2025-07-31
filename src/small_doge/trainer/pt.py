@@ -15,26 +15,20 @@
 import logging
 import os
 import sys
-from argparse import ArgumentParser
 
-import yaml
 import datasets
-import torch
 import transformers
 from transformers import (
-    AutoModelForCausalLM,
     AutoTokenizer,
     DataCollatorForLanguageModeling,
     Trainer,
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
-from small_doge.utils import (
-    get_modeling_classes, 
-    register_model_classes,
-    DogeWarmupCallback,
-    Doge2WarmupCallback,
-    PTConfig,
+from small_doge.utils import PTConfig
+from transformers.models.doge import (
+    DogeConfig,
+    DogeForCausalLM,
 )
 from small_doge.processor import mix_pt_datasets
 from trl import ModelConfig, ScriptArguments, TrlParser
@@ -47,7 +41,6 @@ def main(
     script_args: ScriptArguments,
     training_args: PTConfig,
     model_args: ModelConfig,
-    model_config: dict,
 ):
     # Set seed for reproducibility
     set_seed(training_args.seed)
@@ -79,12 +72,8 @@ def main(
     ######################
     # Determine model type
     ######################
-    recipe_type = training_args.recipe_type.lower()
-    is_doge2 = recipe_type == 'doge2'
-    logger.info(f"Using {'Doge2' if is_doge2 else 'Doge'} model")
-
-    # Get model classes
-    config_class, model_class, causal_lm_class = get_modeling_classes(recipe_type)
+    config_class = DogeConfig
+    causal_lm_class = DogeForCausalLM
 
     ################
     # Load tokenizer
@@ -120,27 +109,25 @@ def main(
     # Model init kwargs
     ###################
     logger.info("*** Initializing model kwargs ***")
-    torch_dtype = (
-        model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
+    config_kwargs = dict(
+        use_cache=False if training_args.gradient_checkpointing else True,
+        **(training_args.model_init_kwargs or {}),
     )
     model_kwargs = dict(
         revision=model_args.model_revision,
         trust_remote_code=model_args.trust_remote_code,
-        attn_implementation=model_args.attn_implementation,
-        torch_dtype=torch_dtype,
-        use_cache=False if training_args.gradient_checkpointing else True,
     )
-    training_args.model_init_kwargs = model_kwargs
 
     ##################
     # Initialize model
     ##################
     logger.info("Initializing model")
-    config = config_class(**model_config)
+    config = config_class(**config_kwargs)
     model = causal_lm_class.from_pretrained(
         model_args.model_name_or_path,
         config=config,
-    ).to(getattr(torch, torch_dtype)) if model_args.model_name_or_path is not None and model_args.model_name_or_path.endswith("checkpoint") else causal_lm_class(config=config)
+        **model_kwargs,
+    ) if model_args.model_name_or_path is not None and model_args.model_name_or_path.endswith("checkpoint") else causal_lm_class(config=config)
 
     model_num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info(f"Model structure: {model}")
@@ -155,26 +142,9 @@ def main(
     else:
         logger.info("No checkpoint found, starting training from scratch.")
 
-    ######################
-    # Set warmup callbacks
-    ######################
-    # Handle warmup phases based on model type
-    callbacks = []
-    if is_doge2:
-        # Doge2 multi warmup handling
-        warmup_steps = getattr(training_args, 'warmup_steps', 0)
-        warmup_phase_steps = model_config.get('warmup_phase_steps', None)  # Custom phase steps if specified
-        if warmup_steps > 0:
-            # Use the new multiphase warmup callback that handles all phases automatically
-            callbacks.append(Doge2WarmupCallback(warmup_steps, warmup_phase_steps))
-    else:
-        # Doge MoE warmup handling
-        if hasattr(config, 'is_moe') and config.is_moe and training_args.warmup_steps > 0:
-            callbacks.append(DogeWarmupCallback(training_args.warmup_steps))
-
-    ################################
+    ###########################
     # Initialize the PT trainer
-    ################################
+    ###########################
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer,
         mlm=False,
@@ -186,7 +156,6 @@ def main(
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         processing_class=tokenizer,
         data_collator=data_collator,
-        callbacks=callbacks if len(callbacks) > 0 else None,
     )
 
     ###############
@@ -235,18 +204,9 @@ def main(
         trainer.save_metrics("eval", metrics)
         logger.info("*** Evaluation complete ***")
 
-    #############################
-    # Register the model and save
-    #############################
-    register_model_classes(recipe_type)
-    config_class.register_for_auto_class()
-    model_class.register_for_auto_class("AutoModel")
-    causal_lm_class.register_for_auto_class("AutoModelForCausalLM")
-    tokenizer = AutoTokenizer.from_pretrained(f"{training_args.output_dir}")
-    tokenizer.save_pretrained(f"{training_args.output_dir}")
-    model = AutoModelForCausalLM.from_pretrained(f"{training_args.output_dir}")
-    model.save_pretrained(f"{training_args.output_dir}")
-
+    #############
+    # Push to hub
+    #############
     if training_args.push_to_hub:
         logger.info("Pushing to hub...")
         trainer.push_to_hub(**kwargs)
@@ -255,17 +215,6 @@ def main(
 
 
 if __name__ == "__main__":
-    model_config_parser = ArgumentParser()
-    model_config_parser.add_argument(
-        "--config", type=str, default="./recipes/doge/Doge-20M/config_full.yaml", help="path to yaml config file of PT"
-    )
-
     parser = TrlParser((ScriptArguments, PTConfig, ModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config(fail_with_unknown_args=False)
-    
-    config_path = model_config_parser.parse_args().config
-    model_config = yaml.load(
-        open(config_path, "r", encoding="utf-8"), Loader=yaml.FullLoader
-    )["model_config"]
-    
-    main(script_args, training_args, model_args, model_config)
+    main(script_args, training_args, model_args)
