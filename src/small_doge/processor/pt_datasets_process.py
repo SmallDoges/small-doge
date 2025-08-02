@@ -20,7 +20,6 @@ import re
 from datasets import Dataset, IterableDataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from trl.data_utils import pack_dataset, truncate_dataset
-from trl.trainer.utils import ConstantLengthDataset
 from argparse import ArgumentParser
 
 
