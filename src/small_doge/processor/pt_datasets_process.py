@@ -70,10 +70,7 @@ def prepare_dataset(
     formatting_func: Optional[Callable[[dict], str]],
     dataset_num_proc: Optional[int],
 ) -> Union[Dataset, IterableDataset]:
-    # Convert the dataset to an IterableDataset if it is a ConstantLengthDataset
-    if isinstance(dataset, ConstantLengthDataset):
-        return dataset
-    
+
     # If the dataset is already preprocessed, skip the processing step
     column_names = list(next(iter(dataset)).keys())
     is_processed = "input_ids" in column_names
