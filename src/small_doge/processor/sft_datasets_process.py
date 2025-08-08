@@ -20,7 +20,6 @@ import re
 from datasets import Dataset, IterableDataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from trl.data_utils import pack_dataset, truncate_dataset, is_conversational, maybe_convert_to_chatml, maybe_apply_chat_template
-from trl.trainer.utils import ConstantLengthDataset
 from argparse import ArgumentParser
 
 
@@ -71,9 +70,6 @@ def prepare_dataset(
     dataset_num_proc: Optional[int],
     tools: Optional[List[dict]] = None,
 ) -> Union[Dataset, IterableDataset]:
-    # Convert the dataset to an IterableDataset if it is a ConstantLengthDataset
-    if isinstance(dataset, ConstantLengthDataset):
-        return dataset
     
     # If the dataset is already preprocessed, skip the processing step
     column_names = list(next(iter(dataset)).keys())
