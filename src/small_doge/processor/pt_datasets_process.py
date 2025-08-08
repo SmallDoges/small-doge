@@ -20,7 +20,6 @@ import re
 from datasets import Dataset, IterableDataset, DatasetDict, load_dataset, load_from_disk, concatenate_datasets
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from trl.data_utils import pack_dataset, truncate_dataset
-from trl.trainer.utils import ConstantLengthDataset
 from argparse import ArgumentParser
 
 
@@ -70,10 +69,7 @@ def prepare_dataset(
     formatting_func: Optional[Callable[[dict], str]],
     dataset_num_proc: Optional[int],
 ) -> Union[Dataset, IterableDataset]:
-    # Convert the dataset to an IterableDataset if it is a ConstantLengthDataset
-    if isinstance(dataset, ConstantLengthDataset):
-        return dataset
-    
+
     # If the dataset is already preprocessed, skip the processing step
     column_names = list(next(iter(dataset)).keys())
     is_processed = "input_ids" in column_names
