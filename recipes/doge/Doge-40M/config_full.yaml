@@ -11,7 +11,7 @@ output_dir: data/Doge-40M
 overwrite_output_dir: true
 push_to_hub: true
 private: true
-# token: <your-token>
+token: <your-token>
 hub_model_id: Doge-40M
 hub_strategy: every_save
 
@@ -19,14 +19,14 @@ hub_strategy: every_save
 model_init_kwargs:
   vocab_size: 128256
   hidden_size: 256
-  intermediate_size: 768
+  intermediate_size: 1024
   num_hidden_layers: 8
   hidden_dropout: 0.0
   hidden_act: "silu"
   tie_word_embeddings: True
-  keep_window_size: 2048
-  max_position_embeddings: 2048
-  rope_theta: 10000.0
+  keep_window_size: 4096
+  max_position_embeddings: 4096
+  rope_theta: 40000.0
   num_attention_heads: 2
   num_key_value_heads: 1
   bos_token_id: 128000
@@ -42,19 +42,19 @@ trust_remote_code: true
 # Dataset arguments
 datasets_and_ratios:
   - "<dataset_name_or_path>": 1.0
-total_sample_size: 4096000
+total_sample_size: 160000
 dataset_text_field: "text"
-max_length: 2048
-packing: false
+max_length: 4096
+packing: true
 dataset_num_proc: 4
 cache_dir: "./cache"
 
 # PT trainer arguments
-preprocessing_num_workers: 1 # Equal to the number of GPUs you are using
+preprocessing_num_workers: 1  # Equal to the number of GPUs you are using
 seed: 233
 do_train: True
-max_steps: 32000
-per_device_train_batch_size: 4
+max_steps: 8000
+per_device_train_batch_size: 1
 do_eval: False
 eval_strategy: 'no'
 eval_steps: 100
@@ -68,11 +68,11 @@ lr_scheduler_type: warmup_stable_decay
 lr_scheduler_kwargs:
   warmup_type: linear
   decay_type: linear
-  num_decay_steps: 6400
+  num_decay_steps: 1600
   min_lr_ratio: 0.0
 warmup_steps: 2000
 weight_decay: 0.01
-gradient_accumulation_steps: 32
+gradient_accumulation_steps: 16
 gradient_checkpointing: false
 gradient_checkpointing_kwargs:
   use_reentrant: false
