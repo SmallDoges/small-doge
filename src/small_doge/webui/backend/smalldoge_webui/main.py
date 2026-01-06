@@ -44,7 +44,9 @@ from small_doge.webui.backend.smalldoge_webui.routers import (
     chats_router,
     models_router,
     openai_router,
-    huggingface_router
+    huggingface_router,
+    datasets_router,
+    training_router
 )
 
 
@@ -227,7 +229,10 @@ async def root():
         "api": {
             "models": "/api/v1/models",
             "chats": "/api/v1/chats",
-            "openai": "/openai"
+            "openai": "/openai",
+            "huggingface": "/api/v1/huggingface",
+            "datasets": "/api/v1/datasets",
+            "training": "/api/v1/training"
         }
     }
 
@@ -264,6 +269,20 @@ app.include_router(
     huggingface_router,
     prefix="/api/v1/huggingface",
     tags=["huggingface"]
+)
+
+# Dataset management routes
+app.include_router(
+    datasets_router,
+    prefix="/api/v1/datasets",
+    tags=["datasets"]
+)
+
+# Training management routes
+app.include_router(
+    training_router,
+    prefix="/api/v1/training",
+    tags=["training"]
 )
 
 
