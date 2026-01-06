@@ -6,6 +6,9 @@ deepspeed_config:
   offload_param_device: none
   zero3_init_flag: false
   zero_stage: 1
+  pipeline_parallel_size: 1
+  data_parallel_size: 8
+  tensor_parallel_size: 1
 distributed_type: DEEPSPEED
 downcast_bf16: 'no'
 machine_rank: 0

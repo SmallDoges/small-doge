@@ -7,6 +7,9 @@ deepspeed_config:
   zero3_init_flag: true
   zero3_save_16bit_model: true
   zero_stage: 3
+  pipeline_parallel_size: 1
+  data_parallel_size: 8
+  tensor_parallel_size: 1
 distributed_type: DEEPSPEED
 downcast_bf16: 'no'
 machine_rank: 0
